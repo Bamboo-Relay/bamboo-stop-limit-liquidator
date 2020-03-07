@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es5",
+        "lib": ["es2017", "dom"],
+        "outDir": "lib",
+        "strict": true,
+        "noUnusedLocals": true,
+        "resolveJsonModule": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "typeRoots": ["../node_modules/@0x/typescript-typings/types", "../node_modules/@types"],
+        "noUnusedParameters": true,
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true
+    },
+    "include": ["src", "test"]
+}
