@@ -11,7 +11,9 @@ export const configs: Configs = {
     // Chain Id to connect to
     CHAIN_ID: process.env.CHAIN_ID === undefined ? 1 : _.parseInt(process.env.CHAIN_ID),
 
-    ETHEREUM_RPC_URL: process.env.ETHEREUM_RPC_URL || "",
+    ETHEREUM_RPC_HTTP_URL: process.env.ETHEREUM_RPC_URL || "",
+    
+    ETHEREUM_RPC_WS_URL: process.env.ETHEREUM_RPC_WS_URL || "",
     
     ETHEREUM_RPC_TYPE: process.env.ETHEREUM_RPC_TYPE === undefined ? EthereumRpcType.Default : process.env.ETHEREUM_RPC_TYPE as EthereumRpcType,
     

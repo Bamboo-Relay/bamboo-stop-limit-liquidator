@@ -9,11 +9,15 @@
         "resolveJsonModule": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "typeRoots": ["../node_modules/@0x/typescript-typings/types", "../node_modules/@types"],
+        "typeRoots": ["../node_modules/@0x/typescript-typings/types", "../node_modules/@types", "./types"],
         "noUnusedParameters": true,
         "declaration": true,
         "declarationMap": true,
-        "sourceMap": true
+        "sourceMap": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "strictPropertyInitialization": false
     },
-    "include": ["src", "test"]
+    "include": ["src", "test"],
+    "exclude": ["types"]
 }

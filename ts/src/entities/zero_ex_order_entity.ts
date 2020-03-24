@@ -1,11 +1,12 @@
 import { BigNumber } from '@0x/utils';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
-import { OrderStatus } from '../types';
+import { OrderStatus, OrderType } from '../types';
+import { bigNumberTransformer } from '../transformers/big_number';
 
 @Entity({ name: 'zero_ex_order' })
 export class ZeroExOrderEntity {
     @PrimaryColumn({ name: 'orderHash', type: 'varchar' })
-    public orderHash?: string;
+    public orderHash: string;
 
     @Column({ name: 'sender_address', type: 'varchar' })
     public senderAddress?: string;
@@ -28,29 +29,29 @@ export class ZeroExOrderEntity {
     @Column({ name: 'fee_recipient_address', type: 'varchar' })
     public feeRecipientAddress?: string;
 
-    @Column({ name: 'expiration_time_seconds', type: 'varchar' })
-    public expirationTimeSeconds?: string;
+    @Column({ name: 'expiration_time_seconds', type: 'varchar', transformer: bigNumberTransformer })
+    public expirationTimeSeconds?: BigNumber;
 
-    @Column({ name: 'maker_fee', type: 'varchar' })
-    public makerFee?: string;
+    @Column({ name: 'maker_fee', type: 'varchar', transformer: bigNumberTransformer })
+    public makerFee?: BigNumber;
 
-    @Column({ name: 'taker_fee', type: 'varchar' })
-    public takerFee?: string;
+    @Column({ name: 'taker_fee', type: 'varchar', transformer: bigNumberTransformer })
+    public takerFee?: BigNumber;
 
-    @Column({ name: 'maker_asset_amount', type: 'varchar' })
-    public makerAssetAmount?: string;
+    @Column({ name: 'maker_asset_amount', type: 'varchar', transformer: bigNumberTransformer })
+    public makerAssetAmount?: BigNumber;
 
-    @Column({ name: 'taker_asset_amount', type: 'varchar' })
-    public takerAssetAmount?: string;
+    @Column({ name: 'taker_asset_amount', type: 'varchar', transformer: bigNumberTransformer })
+    public takerAssetAmount?: BigNumber;
 
-    @Column({ name: 'salt', type: 'varchar' })
-    public salt?: string;
+    @Column({ name: 'salt', type: 'varchar', transformer: bigNumberTransformer })
+    public salt?: BigNumber;
 
     @Column({ name: 'signature', type: 'varchar' })
     public signature?: string;
 
-    @Column({ name: 'remaining_fillable_taker_asset_amount', type: 'varchar' })
-    public remainingFillableTakerAssetAmount?: string;
+    @Column({ name: 'remaining_fillable_taker_asset_amount', type: 'varchar', transformer: bigNumberTransformer })
+    public remainingFillableTakerAssetAmount?: BigNumber;
 
     @Column({ name: 'maker_fee_asset_data', type: 'varchar' })
     public makerFeeAssetData?: string;
@@ -59,25 +60,31 @@ export class ZeroExOrderEntity {
     public takerFeeAssetData?: string;
 
     @Column({ name: 'min_price', type: 'numeric', transformer: bigNumberTransformer })
-    public minPrice?: BigNumber;
+    public minPrice: BigNumber;
 
     @Column({ name: 'max_price', type: 'numeric', transformer: bigNumberTransformer })
-    public maxPrice?: BigNumber;
+    public maxPrice: BigNumber;
 
     @Column({ name: 'order_price', type: 'numeric', transformer: bigNumberTransformer })
-    public orderPrice?: BigNumber;
+    public orderPrice: BigNumber;
 
     @Column({ name: 'oracle_address', type: 'varchar' })
     public oracleAddress?: string;
 
-    @Column({ name: 'asset_pair', type: 'varchar' })
-    public assetPair?: string;
+    @Column({ name: 'base_token', type: 'varchar' })
+    public baseToken?: string;
+
+    @Column({ name: 'quote_token', type: 'varchar' })
+    public quoteToken?: string;
+
+    @Column({ name: 'order_type', type: 'int' })
+    public orderType: OrderType;
 
     @Column({ name: 'status', type: 'int' })
     public status?: OrderStatus;
     constructor(
         opts: {
-            orderHash?: string;
+            orderHash: string;
             senderAddress?: string;
             makerAddress?: string;
             takerAddress?: string;
@@ -85,22 +92,24 @@ export class ZeroExOrderEntity {
             takerAssetData?: string;
             exchangeAddress?: string;
             feeRecipientAddress?: string;
-            expirationTimeSeconds?: string;
-            makerFee?: string;
-            takerFee?: string;
+            expirationTimeSeconds?: BigNumber;
+            makerFee?: BigNumber;
+            takerFee?: BigNumber;
             makerFeeAssetData?: string;
             takerFeeAssetData?: string;
-            makerAssetAmount?: string;
-            takerAssetAmount?: string;
-            salt?: string;
+            makerAssetAmount?: BigNumber;
+            takerAssetAmount?: BigNumber;
+            salt?: BigNumber;
             signature?: string;
             remainingFillableTakerAssetAmount?: string;
-            minPrice?: BigNumber;
-            maxPrice?: BigNumber;
-            orderPrice?: BigNumber;
+            minPrice: BigNumber;
+            maxPrice: BigNumber;
+            orderPrice: BigNumber;
             oracleAddress?: string;
-            assetPair?: string;
-        } = {},
+            baseToken?: string;
+            quoteToken?: string;
+            orderType: OrderType;
+        },
     ) {
         this.orderHash = opts.orderHash;
         this.senderAddress = opts.senderAddress;
@@ -124,7 +133,9 @@ export class ZeroExOrderEntity {
         this.maxPrice = opts.maxPrice;
         this.orderPrice = opts.orderPrice;
         this.oracleAddress = opts.oracleAddress;
-        this.assetPair = opts.assetPair;
+        this.baseToken = opts.baseToken;
+        this.quoteToken = opts.quoteToken;
+        this.orderType = opts.orderType;
         this.status = OrderStatus.Open;
     }
 }
