@@ -11,7 +11,8 @@
         "prettier": "prettier --write 'ts/**/*.ts' --config .prettierrc",
         "start": "node ts/lib/src/liquidator.js",
         "lint": "tslint --project ts --format stylish --exclude ts/src/schemas/**/*",
-        "test": "mocha --require source-map-support/register --require make-promises-safe ts/lib/test/**/*_test.js --timeout 10000 --exit"
+        "test": "mocha --require source-map-support/register --require make-promises-safe ts/lib/test/**/*_test.js --timeout 10000 --exit",
+        "postinstall": "node -e \"try{ fs.unlinkSync(path.resolve(path.dirname(require.resolve('ganache-core')), './typings/index.d.ts')) } catch (err) {}\""
     },
     "devDependencies": {
         "@0x/tslint-config": "^4.0.0",

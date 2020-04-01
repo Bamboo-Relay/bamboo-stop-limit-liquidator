@@ -60,6 +60,37 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
         }
     }
 
+    public getTokenFiatPrice(token: string, fiatAsset: string): BigNumber | undefined {
+        const isUSD = fiatAsset === "USD";
+
+        if ("WETH-USD" in this._lastPrices) {
+            const wethUSD = this._lastPrices["WETH-USD"];
+            let wethFiat!: BigNumber;
+
+            if (isUSD) {
+                wethFiat = wethUSD;
+            }
+            else if (fiatAsset + "-USD" in this._lastPrices) {
+                const fiatToUSD = this._lastPrices[fiatAsset + "-USD"];
+
+                wethFiat = wethUSD.times(fiatToUSD);
+            }
+            else {
+                return;
+            }
+
+            if (token === "WETH") {
+                return wethFiat;
+            }
+
+            if (token + "-WETH" in this._lastPrices) {
+                const tokenWETH = this._lastPrices[token + "-WETH"];
+
+                return tokenWETH.dividedBy(wethFiat);
+            }
+        }
+    }
+
     private _log(error: Error, log: Log): void {
         if (error) {
             return;
@@ -67,7 +98,7 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
 
         const decodedLog = AbiDecoder.decodeLogs([ log ])[0];
         const price = new BigNumber(decodedLog[0].value);
-        const oracle = this._oracles.find(oracle => {
+        const oracle = this._oracles.find(function (oracle: Oracle) {
             if (oracle.address === log.address.toLowerCase()) {
                 return oracle;
             }

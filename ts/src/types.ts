@@ -15,6 +15,8 @@ export interface Configs {
     RESTRICTED_TOKEN_PAIRS: string[];
     API_TYPE: ApiType;
     API_POLL_RATE: number;
+    MINIMUM_PROFIT_PERCENT: BigNumber;
+    PROFIT_ASSET: string;
 }
 
 export enum EthereumRpcType {
@@ -41,6 +43,16 @@ export interface Oracle {
 
 export interface Oracles {
     [chainId: string]: Oracle[]
+}
+
+export interface Token {
+    symbol: string;
+    address: string;
+    decimals: number;
+}
+
+export interface Tokens {
+    [chainId: string]: Token[]
 }
 
 export class WebSocketConnection extends WebSocket.connection {
@@ -210,6 +222,10 @@ export interface OrderSummary {
     quoteToken: string;
     minPrice: BigNumber;
     maxPrice: BigNumber;
+    makerAssetAmount: BigNumber;
+    takerAssetAmount: BigNumber;
+    takerFee: BigNumber;
+    isCoordinated: boolean;
     orderPrice: BigNumber;
     orderHash: string;
     orderType: OrderType;

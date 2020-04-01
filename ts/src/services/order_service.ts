@@ -1,6 +1,7 @@
-import { BigNumber } from '@0x/utils';
+import { BigNumber, NULL_ADDRESS } from '@0x/utils';
 import WebSocket from 'ws';
 
+import { ZeroExOrderEntity } from '../entities/zero_ex_order_entity';
 import { 
     BambooOrderbook, 
     BambooOrderType, 
@@ -15,6 +16,8 @@ import {
 import { NetworkService } from './network_service_interface';
 import { zeroExOrderModel } from '../models/zero_ex_order_model';
 import oracles from '../addresses/oracles.json';
+import { utils } from '../utils/utils';
+import { orderUtils } from '../utils/order_utils';
 
 export class OrderService implements NetworkService {
     private readonly _configs: Configs;
@@ -81,6 +84,10 @@ export class OrderService implements NetworkService {
         return [];
     }
 
+    public async getZeroExOrder(order: OrderSummary): Promise<ZeroExOrderEntity | undefined> {
+        return await zeroExOrderModel.findByOrderHashAsync(order.orderHash);
+    }
+
     private _scheduleUpdateTimer(): void {
         this._updateTimer = setTimeout(
             () => this._syncOrdersAsync(),
@@ -93,6 +100,8 @@ export class OrderService implements NetworkService {
         let ordersByPair: TokenPairOrderSummary = {};
         let ordersByHash: OrderHashOrderSummary = {};
 
+        const currentTimestamp = utils.getCurrentTimestampSeconds();
+
         for (let i = 0, len = this._oracles.length; i < len; i++) {
             const oracle = this._oracles[i];
 
@@ -102,6 +111,12 @@ export class OrderService implements NetworkService {
                 const tokenPair = oracle.baseToken + "-" + oracle.quoteToken;
                 for (let j = 0, len2 = ordersForPair.length; j < len2; j++) {
                     const order = ordersForPair[j];
+
+                    // Cull expired orders
+                    if (order.expirationTimeSeconds.lt(currentTimestamp)) {
+                        await zeroExOrderModel.deleteAsync(order);
+                        continue;
+                    }
 
                     if (!(tokenPair in ordersByPair)) {
                         ordersByPair[tokenPair] = [];
@@ -113,6 +128,10 @@ export class OrderService implements NetworkService {
                         minPrice: order.minPrice,
                         maxPrice: order.maxPrice,
                         orderPrice: order.orderPrice,
+                        makerAssetAmount: order.makerAssetAmount,
+                        takerAssetAmount: order.takerAssetAmount,
+                        takerFee: order.takerFee,
+                        isCoordinated: order.senderAddress !== NULL_ADDRESS && order.senderAddress !== "0x",
                         orderHash: order.orderHash,
                         orderType: order.orderType
                     }
@@ -156,7 +175,7 @@ export class OrderService implements NetworkService {
 
                         const exists = ordersByPair[tokenPair].find(el => el.orderHash === order.orderHash);
 
-                        if (!exists) {
+                        if (!exists && orderUtils.isValidOrder(order)) {
                             const orderPrice = new BigNumber(order.price);
                             const zeroExOrder = await zeroExOrderModel.createAsync(
                                 order.signedOrder,
@@ -171,6 +190,10 @@ export class OrderService implements NetworkService {
                                 quoteToken: oracle.quoteToken,
                                 minPrice: zeroExOrder.minPrice,
                                 maxPrice: zeroExOrder.maxPrice,
+                                makerAssetAmount: new BigNumber(order.signedOrder.makerAssetAmount),
+                                takerAssetAmount: new BigNumber(order.signedOrder.takerAssetAmount),
+                                takerFee: new BigNumber(order.signedOrder.takerFee),
+                                isCoordinated: order.signedOrder.senderAddress !== NULL_ADDRESS && order.signedOrder.senderAddress !== "0x",
                                 orderPrice: orderPrice,
                                 orderHash: order.orderHash,
                                 orderType: order.type === BambooOrderType.BID ? OrderType.Buy : OrderType.Sell
@@ -235,7 +258,7 @@ export class OrderService implements NetworkService {
                             const order = action.event.order;
                             orderHash = order.orderHash;
                             // Stop limit orders and no double-ups
-                            if (order.executionType === "STOP-LIMIT" && !(orderHash in this._ordersByHash)) {
+                            if (order.executionType === "STOP-LIMIT" && !(orderHash in this._ordersByHash) && orderUtils.isValidOrder(order)) {
                                 const oracle = this._oracles.find(el => el.baseToken === baseToken && el.quoteToken === quoteToken);
                                 if (oracle) {
                                     const orderPrice = new BigNumber(order.price);
@@ -253,6 +276,10 @@ export class OrderService implements NetworkService {
                                         minPrice: zeroExOrder.minPrice,
                                         maxPrice: zeroExOrder.maxPrice,
                                         orderPrice: orderPrice,
+                                        makerAssetAmount: new BigNumber(order.signedOrder.makerAssetAmount),
+                                        takerAssetAmount: new BigNumber(order.signedOrder.takerAssetAmount),
+                                        takerFee: new BigNumber(order.signedOrder.takerFee),
+                                        isCoordinated: order.signedOrder.senderAddress !== NULL_ADDRESS && order.signedOrder.senderAddress !== "0x",
                                         orderHash: order.orderHash,
                                         orderType: order.type === BambooOrderType.BID ? OrderType.Buy : OrderType.Sell
                                     }

@@ -1,6 +1,42 @@
 {
     "1": [
         {
+            "name": "ETH/USD",
+            "address": "0x79febf6b9f76853edbcbc913e6aae8232cfb9de9",
+            "baseToken": "WETH",
+            "quoteToken": "USD"
+        },
+        {
+            "name": "AUD/USD",
+            "address": "0x05cf62c4ba0ccea3da680f9a8744ac51116d6231",
+            "baseToken": "AUD",
+            "quoteToken": "USD"
+        },
+        {
+            "name": "EUR/USD",
+            "address": "0x25fa978ea1a7dc9bdc33a2959b9053eae57169b5",
+            "baseToken": "EUR",
+            "quoteToken": "USD"
+        },
+        {
+            "name": "CHF/USD",
+            "address": "0x02d5c618dbc591544b19d0bf13543c0728a3c4ec",
+            "baseToken": "CHF",
+            "quoteToken": "USD"
+        },
+        {
+            "name": "GBP/USD",
+            "address": "0x151445852b0cfdf6a4cc81440f2af99176e8ad08",
+            "baseToken": "GBP",
+            "quoteToken": "USD"
+        },
+        {
+            "name": "JPY/USD",
+            "address": "0xe1407bfaa6b5965bad1c9f38316a3b655a09d8a6",
+            "baseToken": "JPY",
+            "quoteToken": "USD"
+        },
+        {
             "name": "DAI/ETH",
             "address": "0x037e8f2125bf532f3e228991e051c8a7253b642c",
             "baseToken": "DAI",

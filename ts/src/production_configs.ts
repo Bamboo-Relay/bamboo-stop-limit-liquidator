@@ -1,3 +1,4 @@
+import { BigNumber } from '@0x/utils';
 import * as _ from 'lodash';
 
 import { 
@@ -34,5 +35,9 @@ export const configs: Configs = {
 
     API_TYPE: ApiType.Bamboo,
     
-    API_POLL_RATE: 60000
+    API_POLL_RATE: 60000,
+
+    MINIMUM_PROFIT_PERCENT: process.env.MINIMUM_PROFIT_PERCENT === undefined ? new BigNumber(1) : new BigNumber(process.env.MINIMUM_PROFIT_PERCENT),
+
+    PROFIT_ASSET: process.env.PROFIT_ASSET === undefined ? "USD" : process.env.PROFIT_ASSET,
 };
