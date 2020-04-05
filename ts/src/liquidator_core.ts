@@ -64,7 +64,7 @@ export class Liquidator implements NetworkService {
         quoteToken: string, 
         price: BigNumber
     ): Promise<void> {
-        if (!this._isStarted) {
+        if (!this._isStarted || !this._orderService.isConnected()) {
             return;
         }
         const tokenFiatPrice = this._oraclePriceService.getTokenFiatPrice(baseToken, this._configs.PROFIT_ASSET);
@@ -80,7 +80,11 @@ export class Liquidator implements NetworkService {
             tokenFiatPrice,
             gasPrice,
             ethFiatPrice
-       );
+        );
+        if (!profitableOrders.length) {
+            return;
+        }
+        const test = await this._orderService.matchProfitableOrders(profitableOrders);
     }
 
     private async _findProfitableOrders(

@@ -19,7 +19,7 @@ export const zeroExOrderModel = {
         orderPrice: BigNumber
     ): Promise<ZeroExOrderEntity> {
         const orderHash = zeroExOrderModel.getHash(order);
-        let decodedStopLimitData: StopLimitParameters
+        let decodedStopLimitData: StopLimitParameters;
 
         try {
             const decodedMultiData: MultiAssetData = assetDataUtils.decodeAssetDataOrThrow(order.makerAssetData) as MultiAssetData;

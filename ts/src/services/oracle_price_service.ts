@@ -107,7 +107,9 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
         if (oracle) {
             this._lastPrices[oracle.baseToken + "-" + oracle.quoteToken] = price;
 
-            this.emit("priceUpdated", oracle.baseToken, oracle.quoteToken, price);
+            if (!oracle.isFiat) {
+                this.emit("priceUpdated", oracle.baseToken, oracle.quoteToken, price);
+            }
         }
     }
 }

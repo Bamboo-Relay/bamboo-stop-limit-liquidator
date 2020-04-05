@@ -39,6 +39,7 @@ export interface Oracle {
     address: string;
     baseToken: string;
     quoteToken: string;
+    isFiat: boolean;
 }
 
 export interface Oracles {

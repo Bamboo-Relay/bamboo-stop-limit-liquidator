@@ -27,6 +27,9 @@ export class OrderService implements NetworkService {
     private _updateTimer?: NodeJS.Timeout;
     private _ordersByPair: TokenPairOrderSummary = {};
     private _ordersByHash: OrderHashOrderSummary = {};
+    private _isStarted = false;
+    private _isSynced = false;
+    private _isWsConnected = false;
     constructor(configs: Configs) {
         this._configs = configs;
         switch (configs.CHAIN_ID) {
@@ -53,17 +56,19 @@ export class OrderService implements NetworkService {
     }
 
     public async start(): Promise<boolean> {
-        if (this._updateTimer || this._ws) {
+        if (this._isStarted) {
             await this.stop();
         }
 
         await this._loadCachedOrders();
         this._listenWebSocket();
-        await this._syncOrdersAsync();
+        this._isSynced = await this._syncOrdersAsync();
+        this._isStarted = true;
         return true;
     }
 
     public async stop(): Promise<boolean> {
+        this._isStarted = false;
         if (this._updateTimer) {
             clearTimeout(this._updateTimer);
         }
@@ -72,6 +77,10 @@ export class OrderService implements NetworkService {
         }
 
         return true;
+    }
+
+    public isConnected(): boolean {
+        return this._isSynced && this._isWsConnected;
     }
 
     public getOrders(baseToken: string, quoteToken: string): OrderSummary[] {
@@ -90,7 +99,7 @@ export class OrderService implements NetworkService {
 
     private _scheduleUpdateTimer(): void {
         this._updateTimer = setTimeout(
-            () => this._syncOrdersAsync(),
+            async () => this._isSynced = await this._syncOrdersAsync(),
             this._configs.API_POLL_RATE
         );
     }
@@ -146,9 +155,10 @@ export class OrderService implements NetworkService {
         this._ordersByHash = ordersByHash;
     }
 
-    private async _syncOrdersAsync(): Promise<void> {
+    private async _syncOrdersAsync(): Promise<boolean> {
         let ordersByPair: TokenPairOrderSummary = this._ordersByPair;
         let ordersByHash: OrderHashOrderSummary = this._ordersByHash;
+        let success = true;
 
         for (let i = 0, len = this._oracles.length; i < len; i++) {
             const oracle = this._oracles[i];
@@ -218,15 +228,19 @@ export class OrderService implements NetworkService {
                     }
                 }
             } catch (err) {
-
+                success = false;
             }
         }
 
         this._scheduleUpdateTimer();
+        return success;
     }
 
     private _listenWebSocket(): void {
+        let isAlive = true;
         this._ws = new WebSocket(this._apiUrl + "ws");
+
+        this._ws.on('pong', () => isAlive = true);
 
         this._ws.on("message", async (data: string) => {
             const message = JSON.parse(data);
@@ -302,6 +316,28 @@ export class OrderService implements NetworkService {
                 requestId: "bamboo-liquidator-" + Math.floor(new Date().getTime()),
                 chainId: this._configs.CHAIN_ID
             }));
+            this._isWsConnected = true;
         });
+
+        this._ws.on("close", () => {
+            this._isWsConnected = false;
+            // Reconnect
+            if (!this._isStarted) {
+                setTimeout(() => this._listenWebSocket(), 5000);
+            }
+        });
+
+        const heartBeat = () => {
+            if (!isAlive) {
+                this._ws.close();
+            }
+            else {
+                isAlive = false;
+                this._ws.ping();
+                setTimeout(() => heartBeat, 30000);
+            }
+        };
+
+        setTimeout(() => heartBeat, 30000);
     }
 }

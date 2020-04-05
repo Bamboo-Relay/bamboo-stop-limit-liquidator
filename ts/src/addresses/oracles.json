@@ -4,127 +4,148 @@
             "name": "ETH/USD",
             "address": "0x79febf6b9f76853edbcbc913e6aae8232cfb9de9",
             "baseToken": "WETH",
-            "quoteToken": "USD"
+            "quoteToken": "USD",
+            "isFiat": true
         },
         {
             "name": "AUD/USD",
             "address": "0x05cf62c4ba0ccea3da680f9a8744ac51116d6231",
             "baseToken": "AUD",
-            "quoteToken": "USD"
+            "quoteToken": "USD",
+            "isFiat": true
         },
         {
             "name": "EUR/USD",
             "address": "0x25fa978ea1a7dc9bdc33a2959b9053eae57169b5",
             "baseToken": "EUR",
-            "quoteToken": "USD"
+            "quoteToken": "USD",
+            "isFiat": true
         },
         {
             "name": "CHF/USD",
             "address": "0x02d5c618dbc591544b19d0bf13543c0728a3c4ec",
             "baseToken": "CHF",
-            "quoteToken": "USD"
+            "quoteToken": "USD",
+            "isFiat": true
         },
         {
             "name": "GBP/USD",
             "address": "0x151445852b0cfdf6a4cc81440f2af99176e8ad08",
             "baseToken": "GBP",
-            "quoteToken": "USD"
+            "quoteToken": "USD",
+            "isFiat": true
         },
         {
             "name": "JPY/USD",
             "address": "0xe1407bfaa6b5965bad1c9f38316a3b655a09d8a6",
             "baseToken": "JPY",
-            "quoteToken": "USD"
+            "quoteToken": "USD",
+            "isFiat": true
         },
         {
             "name": "DAI/ETH",
             "address": "0x037e8f2125bf532f3e228991e051c8a7253b642c",
             "baseToken": "DAI",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "LRC/ETH",
             "address": "0x8770afe90c52fd117f29192866de705f63e59407",
             "baseToken": "LRC",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "LEND/ETH",
             "address": "0x1eeaf25f2ecbcaf204ecadc8db7b0db9da845327",
             "baseToken": "LEND",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "MKR/ETH",
             "address": "0xda3d675d50ff6c555973c4f0424964e1f6a4e7d3",
             "baseToken": "MKR",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "MANA/ETH",
             "address": "0xc89c4ed8f52bb17314022f6c0dcb26210c905c97",
             "baseToken": "MANA",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "KNC/ETH",
             "address": "0xd0e785973390ff8e77a83961efdb4f271e6b8152",
             "baseToken": "KNC",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "LINK/ETH",
             "address": "0xecfa53a8bda4f0c4dd39c55cc8def3757acfdd07",
             "baseToken": "LINK",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "USDC/ETH",
             "address": "0xde54467873c3bcaa76421061036053e371721708",
             "baseToken": "USDC",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "REP/ETH",
             "address": "0xb8b513d9cf440c1b6f5c7142120d611c94fc220c",
             "baseToken": "REP",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "ZRX/ETH",
             "address": "0xa0f9d94f060836756ffc84db4c78d097ca8c23e8",
             "baseToken": "ZRX",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "BAT/ETH",
             "address": "0x9b4e2579895efa2b4765063310dc4109a7641129",
             "baseToken": "BAT",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "TUSD/ETH",
             "address": "0x73ead35fd6a572ef763b13be65a9db96f7643577",
             "baseToken": "TUSD",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "USDT/ETH",
             "address": "0xa874fe207df445ff19e7482c746c4d3fd0cb9ace",
             "baseToken": "USDT",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "SUSD/ETH",
             "address": "0x6d626ff97f0e89f6f983de425dc5b24a18de26ea",
             "baseToken": "SUSD",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "SNX/ETH",
             "address": "0xe23d1142de4e83c08bb048bcab54d50907390828",
             "baseToken": "SNX",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         }
     ],
     "3": [
@@ -132,37 +153,43 @@
             "name": "DAI/ETH",
             "address": "0x017d3880ee52e23dbc5bd8a855d51beae41f5cbb",
             "baseToken": "DAI",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "LINK/ETH",
             "address": "0x060b38b197fe60ca5f36ea94452da7f1bc3c7823",
             "baseToken": "LINK",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "USDC/ETH",
             "address": "0x2384742359a5b178bd32a858213680355888c88b",
             "baseToken": "USDC",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "REP/ETH",
             "address": "0xaaf825b7a1e833f2b79975108a030c76756fdc1a",
             "baseToken": "REP",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "ZRX/ETH",
             "address": "0x4236076ba45fffa00678f0008ab76ac79222d7fe",
             "baseToken": "ZRX",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "BAT/ETH",
             "address": "0x0237f6c4ba705d0352a1a404e7608adddf479570",
             "baseToken": "BAT",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         }
     ],
     "4": [
@@ -170,37 +197,43 @@
             "name": "DAI/ETH",
             "address": "0x572ddec9087154dc5dfbb1546bb62713147e0ab0",
             "baseToken": "DAI",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "LINK/ETH",
             "address": "0x0853e36eead0eaa08d61e94237168696383869dd",
             "baseToken": "LINK",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "USDC/ETH",
             "address": "0x50390d95efcad051b78498a3d7bb3ff8cd3dbbd7",
             "baseToken": "USDC",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "REP/ETH",
             "address": "0xd8fb78da76c7c9c8c1889eea6b53967d87bf0a79",
             "baseToken": "REP",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "ZRX/ETH",
             "address": "0x4b387f15d803eb6635c37a2b51e0e487c11c3b79",
             "baseToken": "ZRX",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         },
         {
             "name": "BAT/ETH",
             "address": "0x326c977e6efc84e512bb9c30f76e30c160ed06fb",
             "baseToken": "BAT",
-            "quoteToken": "WETH"
+            "quoteToken": "WETH",
+            "isFiat": false
         }
     ]
 }

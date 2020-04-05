@@ -22,6 +22,10 @@ export const orderUtils = {
         }
 
         const oracle = chainOracles.find(el => el.baseToken === baseToken.symbol && el.quoteToken === quoteToken.symbol);
+        if (oracle) {
+            return true;
+        }
+        return false;
     },
     isOrderProfitable: (
         orderSummary: OrderSummary,
