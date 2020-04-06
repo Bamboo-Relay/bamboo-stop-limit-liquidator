@@ -1,5 +1,6 @@
 import { BigNumber } from '@0x/utils';
 import { SignedOrder } from '@0x/types';
+import { assetDataUtils, ERC20AssetData, orderCalculationUtils } from "@0x/order-utils";
 
 import { Oracles, Tokens, OrderSummary, OrderType, BambooSignedOrder } from '../types';
 import { ZeroExOrderEntity } from '../entities/zero_ex_order_entity';
@@ -58,7 +59,7 @@ export const orderUtils = {
             ? takerProfit.dividedBy(tokenFiatPrice)
             : takerProfit.times(tokenFiatPrice);
 
-        // Asume atomic match, i.e. two ZeroExORders
+        // Asume atomic match, i.e. two ZeroExOrders
         const protocolFeeFiat = new BigNumber(150000).times(gasPrice).times(2).shiftedBy(-18).times(ethFiatPrice);
 
         // Estimate
@@ -68,8 +69,58 @@ export const orderUtils = {
 
         return fiatProfit.gt(0) && fiatProfit.dividedBy(takerFiatProfit).times(100).gte(minimumProfitPercentage);
     },
-    async isTradeProfitable(stopLimitOrder: SignedOrder, matchedOrders: SignedOrder[]): Promise<boolean> {
-        return false;
+    async isTradeProfitable(
+        stopLimitOrder: SignedOrder,
+        matchedOrder: SignedOrder,
+        fillTakerAssetAmount: BigNumber,
+        gasPrice: BigNumber,
+        ethFiatPrice: BigNumber,
+        tokenFiatPrice: BigNumber,
+        minimumProfitPercentage: BigNumber
+        ): Promise<boolean> {
+        const chainTokens = (tokens as Tokens)[stopLimitOrder.chainId.toString()];
+
+        const tokenA = (assetDataUtils.decodeAssetDataOrThrow(matchedOrder.takerAssetData) as ERC20AssetData).tokenAddress;
+        const tokenB = (assetDataUtils.decodeAssetDataOrThrow(matchedOrder.makerAssetData) as ERC20AssetData).tokenAddress;
+
+        let baseToken = chainTokens.find(el => el.address === tokenA);
+        let quoteToken = chainTokens.find(el => el.address === tokenB);
+        let orderType = OrderType.Sell;
+
+        if (!baseToken || !quoteToken) {
+            baseToken = chainTokens.find(el => el.address === tokenB);
+            quoteToken = chainTokens.find(el => el.address === tokenA);
+            orderType = OrderType.Buy;
+        }
+
+        const fillMakerAssetAmount = orderCalculationUtils.getMakerFillAmount(
+            matchedOrder,
+            fillTakerAssetAmount
+        );
+
+        let makerAssetFilledAmount: BigNumber;
+
+        if (stopLimitOrder.takerAssetAmount.gt(fillMakerAssetAmount)) {
+            makerAssetFilledAmount = stopLimitOrder.makerAssetAmount.times(fillMakerAssetAmount).dividedBy(stopLimitOrder.takerAssetAmount).integerValue(BigNumber.ROUND_FLOOR);
+        } else {
+            makerAssetFilledAmount = stopLimitOrder.makerAssetAmount;
+        }
+
+        const profitMakerAsset = makerAssetFilledAmount.minus(fillTakerAssetAmount);
+
+        const profitMakerFiat = orderType === OrderType.Buy
+            ? profitMakerAsset.dividedBy(tokenFiatPrice)
+            : profitMakerAsset.times(tokenFiatPrice);
+
+        // Asume atomic match, i.e. two ZeroExOrders
+        const protocolFeeFiat = new BigNumber(150000).times(gasPrice).times(2).shiftedBy(-18).times(ethFiatPrice);
+
+        // Estimate
+        const gasCostFiat = new BigNumber(300000).times(gasPrice).times(2).shiftedBy(-18).times(ethFiatPrice);
+
+        const fiatProfit = profitMakerFiat.minus(protocolFeeFiat).minus(gasCostFiat);
+
+        return fiatProfit.gt(0) && fiatProfit.dividedBy(profitMakerFiat).times(100).gte(minimumProfitPercentage);
     },
     deserializeOrder: (signedOrderEntity: ZeroExOrderEntity): SignedOrder => {
         return {

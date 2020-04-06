@@ -4,7 +4,9 @@ import WebSocket from 'ws';
 import { ZeroExOrderEntity } from '../entities/zero_ex_order_entity';
 import { 
     BambooOrderbook, 
-    BambooOrderType, 
+    BambooOrderType,
+    BambooMatchOrders,
+    BambooMatchOrdersResponse,
     Configs, 
     Oracle, 
     Oracles, 
@@ -95,6 +97,30 @@ export class OrderService implements NetworkService {
 
     public async getZeroExOrder(order: OrderSummary): Promise<ZeroExOrderEntity | undefined> {
         return await zeroExOrderModel.findByOrderHashAsync(order.orderHash);
+    }
+
+    public async matchProfitableOrders(orders: ZeroExOrderEntity[]): Promise<BambooMatchOrders> {
+        const response: BambooMatchOrdersResponse = await(
+            await fetch(
+                this._apiUrl + "orders/match",
+                {
+                    method: 'post',
+                    body: JSON.stringify(orders),
+                    headers: {'Content-Type': 'application/json'},
+                }
+            )
+        ).json();
+
+        const result: BambooMatchOrders = {};
+
+        Object.keys(response).forEach(orderHash => 
+            result[orderHash] = {
+                order: response[orderHash].order,
+                fillTakerAssetAmount: new BigNumber(response[orderHash].fillTakerAssetAmount),
+            }
+        );
+
+        return result;
     }
 
     private _scheduleUpdateTimer(): void {

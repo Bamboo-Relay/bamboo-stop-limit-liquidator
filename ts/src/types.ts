@@ -288,3 +288,17 @@ export interface BambooOrderbook {
     bids: BambooSignedOrder[];
     asks: BambooSignedOrder[];
 }
+
+export interface BambooMatchOrdersResponse {
+    [orderHash: string]: {
+        order: SignedOrder,
+        fillTakerAssetAmount: string
+    }
+}
+
+export interface BambooMatchOrders {
+    [orderHash: string]: {
+        order: SignedOrder,
+        fillTakerAssetAmount: BigNumber
+    }
+}

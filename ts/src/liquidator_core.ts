@@ -7,6 +7,7 @@ import { OraclePriceService } from './services/oracle_price_service';
 import { OrderService } from './services/order_service';
 import { Configs, OrderSummary } from './types';
 import { orderUtils } from './utils/order_utils';
+import { orderHashUtils } from '@0x/order-utils';
 
 export class Liquidator implements NetworkService {
     private readonly _configs: Configs;
@@ -84,7 +85,33 @@ export class Liquidator implements NetworkService {
         if (!profitableOrders.length) {
             return;
         }
-        const test = await this._orderService.matchProfitableOrders(profitableOrders);
+        const matchedOrders = await this._orderService.matchProfitableOrders(profitableOrders);
+        let profitableTrades = [];
+        for (let i = 0, len = profitableOrders.length; i < len; i++) {
+            const profitableOrder = profitableOrders[i];
+            const orderHash = orderHashUtils.getOrderHash(profitableOrder);
+            if (!(orderHash in matchedOrders)) {
+                continue;
+            }
+            const matchedOrder = matchedOrders[orderHash];
+            if (matchedOrder.order || matchedOrder.fillTakerAssetAmount.eq(0)) {
+                continue;
+            }
+            if (orderUtils.isTradeProfitable(
+                profitableOrder,
+                matchedOrder.order,
+                matchedOrder.fillTakerAssetAmount,
+                gasPrice,
+                tokenFiatPrice,
+                ethFiatPrice,
+                this._configs.MINIMUM_PROFIT_PERCENT
+            )) {
+                profitableTrades.push([
+                    profitableOrder,
+                    matchedOrder.order,
+                ]);
+            }
+        }
     }
 
     private async _findProfitableOrders(
@@ -101,8 +128,8 @@ export class Liquidator implements NetworkService {
             if (orderUtils.isOrderProfitable(
                 order,
                 tokenPrice,
-                tokenFiatPrice,
                 gasPrice,
+                tokenFiatPrice,
                 ethFiatPrice,
                 this._configs.MINIMUM_PROFIT_PERCENT
             )) {
