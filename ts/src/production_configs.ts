@@ -22,6 +22,8 @@ export const configs: Configs = {
         process.env.ETHEREUM_RPC_TYPE === undefined
             ? EthereumRpcConnectionMethod.Polling
             : process.env.ETHEREUM_RPC_CONNECTION_METHOD as EthereumRpcConnectionMethod,
+
+    PRIVATE_KEY: process.env.PRIVATE_KEY || "", 
     
     GAS_PRICE_SOURCE: process.env.ETHEREUM_RPC_URL || "ethgasstation",
     

@@ -9,7 +9,7 @@
         "resolveJsonModule": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "typeRoots": ["../node_modules/@0x/typescript-typings/types", "../node_modules/@types", "./types"],
+        "typeRoots": ["./types", "../node_modules/@0x/typescript-typings/types", "../node_modules/@types"],
         "noUnusedParameters": true,
         "declaration": true,
         "declarationMap": true,

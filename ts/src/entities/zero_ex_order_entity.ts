@@ -105,7 +105,7 @@ export class ZeroExOrderEntity {
             takerAssetAmount: BigNumber;
             salt: BigNumber;
             signature: string;
-            remainingFillableTakerAssetAmount: BigNumber;
+            //remainingFillableTakerAssetAmount: BigNumber;
             minPrice: BigNumber;
             maxPrice: BigNumber;
             orderPrice: BigNumber;
@@ -133,7 +133,7 @@ export class ZeroExOrderEntity {
         this.takerAssetAmount = opts.takerAssetAmount;
         this.salt = opts.salt;
         this.signature = opts.signature;
-        this.remainingFillableTakerAssetAmount = opts.remainingFillableTakerAssetAmount;
+        //this.remainingFillableTakerAssetAmount = opts.remainingFillableTakerAssetAmount;
         this.minPrice = opts.minPrice;
         this.maxPrice = opts.maxPrice;
         this.orderPrice = opts.orderPrice;

@@ -48,7 +48,7 @@ export const zeroExOrderModel = {
             takerAssetAmount: new BigNumber(order.takerAssetAmount),
             salt: new BigNumber(order.salt),
             signature: order.signature,
-            remainingFillableTakerAssetAmount: order.senderAddress,
+            //remainingFillableTakerAssetAmount: order.senderAddress,
             minPrice: decodedStopLimitData.minPrice,
             maxPrice: decodedStopLimitData.maxPrice,
             orderPrice: orderPrice,

@@ -39,11 +39,14 @@ export class Liquidator implements NetworkService {
 
         await Promise.all([
             this._gasPriceService.start(),
-            this._oraclePriceService.start(),
-            this._orderService.start()
+            this._orderService.start(),
+            this._oraclePriceService.start()
         ]);
 
         this._isStarted = true;
+
+        // Has to be post service startup
+        await this._oraclePriceService.triggerAll();
         
         return true;
     }
@@ -111,6 +114,9 @@ export class Liquidator implements NetworkService {
                     matchedOrder.order,
                 ]);
             }
+        }
+        for (let i = 0, len = profitableTrades.length; i < len; i++) {
+            
         }
     }
 

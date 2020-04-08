@@ -1,11 +1,12 @@
 import { BigNumber } from '@0x/utils';
 import { SignedOrder } from '@0x/types';
-import { assetDataUtils, ERC20AssetData, orderCalculationUtils } from "@0x/order-utils";
+import { assetDataUtils, ERC20AssetData, orderCalculationUtils, orderHashUtils } from "@0x/order-utils";
 
 import { Oracles, Tokens, OrderSummary, OrderType, BambooSignedOrder } from '../types';
 import { ZeroExOrderEntity } from '../entities/zero_ex_order_entity';
 import oracles from '../addresses/oracles.json';
 import tokens from '../addresses/tokens.json';
+import { utils } from './utils';
 
 export const orderUtils = {
     isValidOrder: (order: BambooSignedOrder): boolean => {
@@ -120,7 +121,13 @@ export const orderUtils = {
 
         const fiatProfit = profitMakerFiat.minus(protocolFeeFiat).minus(gasCostFiat);
 
-        return fiatProfit.gt(0) && fiatProfit.dividedBy(profitMakerFiat).times(100).gte(minimumProfitPercentage);
+        if (fiatProfit.gt(0) && fiatProfit.dividedBy(profitMakerFiat).times(100).gte(minimumProfitPercentage)) {
+            utils.log("Order " + orderHashUtils.getOrderHash(stopLimitOrder) + " is profitable for " + fiatProfit.toFixed(4));
+
+            return true;
+        }
+
+        return false;
     },
     deserializeOrder: (signedOrderEntity: ZeroExOrderEntity): SignedOrder => {
         return {

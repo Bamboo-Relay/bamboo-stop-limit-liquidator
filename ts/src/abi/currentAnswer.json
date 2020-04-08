@@ -1,0 +1,16 @@
+[
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "currentAnswer",
+        "outputs": [
+            {
+                "name": "",
+                "type": "int256"
+            }
+        ],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
+    }
+]

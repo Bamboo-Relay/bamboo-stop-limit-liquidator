@@ -10,6 +10,7 @@ export interface Configs {
     ETHEREUM_RPC_WS_URL: string;
     ETHEREUM_RPC_TYPE: EthereumRpcType;
     ETHEREUM_RPC_CONNECTION_METHOD: EthereumRpcConnectionMethod;
+    PRIVATE_KEY: string,
     GAS_PRICE_SOURCE: string;
     GAS_PRICE_POLL_RATE_MS: number;
     RESTRICTED_TOKEN_PAIRS: string[];
