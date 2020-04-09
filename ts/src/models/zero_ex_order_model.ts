@@ -29,6 +29,8 @@ export const zeroExOrderModel = {
             decodedStopLimitData = decodeStopLimitStaticCallData(decodedMultiData.nestedAssetData[1]);
         }
 
+        console.log("Creating")
+
         let orderEntity = new ZeroExOrderEntity({
             orderHash,
             chainId: order.chainId,

@@ -9,14 +9,33 @@ import { GasPriceService } from './services/gas_price_service';
 import { OraclePriceService } from './services/oracle_price_service';
 import { OrderService } from './services/order_service';
 import { utils } from './utils/utils';
+import { hasDBConnection, initDBConnectionAsync } from './db_connection';
 
 (async () => {
     assertConfigsAreValid(configs);
+    if (!hasDBConnection()) {
+        await initDBConnectionAsync();
+    }
+
+    await utils.showBanner();
+
+    utils.logColor([
+        "Starting",
+        ["Bamboo", "green"],
+        ["Relay", "red"],
+        "Stop Limit Liquidator on Chain",
+        [configs.CHAIN_ID.toString(), "green"]
+    ]);
+
+    utils.logColor([
+        ["WARNING This is alpha software, your funds may be at risk", "red_bg"]
+    ]);
 
     const gasPriceService = new GasPriceService(configs);
     const oraclePriceService = new OraclePriceService(configs);
     const orderService = new OrderService(configs);
     
     const liquidator = new Liquidator(configs, gasPriceService, oraclePriceService, orderService);
+
     await liquidator.start();
 })().catch(utils.log);

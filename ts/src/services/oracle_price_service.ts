@@ -9,7 +9,7 @@ import { Configs, Oracle, Oracles } from '../types';
 import { NetworkService } from './network_service_interface';
 import oracles from '../addresses/oracles.json';
 import AnswerUpdatedABI from '../abi/AnswerUpdated.json';
-import currentAnswerABI from '../abi/currentAnswer.json';
+import latestAnswerABI from '../abi/latestAnswer.json';
 
 const ANSWER_UPDATED_LOG_TOPIC = "0x0559884fd3a460db3073b7fc896cc77986f16e378210ded43186175bf646fc5f";
 
@@ -82,12 +82,12 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
     }
 
     public async _updateAllAsync(): Promise<void> {
-        const oracleContract = new this._web3.eth.Contract(currentAnswerABI as any);
+        const oracleContract = new this._web3.eth.Contract(latestAnswerABI as any);
         for (let i = 0, len = this._oracles.length; i < len; i++) {
             const oracle = this._oracles[i];
             oracleContract.address = oracle.address;
             try {
-                const price = new BigNumber(await oracleContract.methods.currentAnswer().call());
+                const price = new BigNumber(await oracleContract.methods.latestAnswer().call());
 
                 if (price.gt(0)) {
                     const tokenPair = oracle.baseToken + "-" + oracle.quoteToken;

@@ -12,7 +12,7 @@ export const configs: Configs = {
     // Chain Id to connect to
     CHAIN_ID: process.env.CHAIN_ID === undefined ? 1 : _.parseInt(process.env.CHAIN_ID),
 
-    ETHEREUM_RPC_HTTP_URL: process.env.ETHEREUM_RPC_URL || "",
+    ETHEREUM_RPC_HTTP_URL: process.env.ETHEREUM_RPC_HTTP_URL || "",
     
     ETHEREUM_RPC_WS_URL: process.env.ETHEREUM_RPC_WS_URL || "",
     
@@ -25,7 +25,7 @@ export const configs: Configs = {
 
     PRIVATE_KEY: process.env.PRIVATE_KEY || "", 
     
-    GAS_PRICE_SOURCE: process.env.ETHEREUM_RPC_URL || "ethgasstation",
+    GAS_PRICE_SOURCE: process.env.GAS_PRICE_SOURCE || "ethgasstation",
     
     GAS_PRICE_POLL_RATE_MS:
         process.env.GAS_PRICE_POLL_RATE_MS === undefined ? 60000 : _.parseInt(process.env.GAS_PRICE_POLL_RATE_MS),

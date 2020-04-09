@@ -3,6 +3,35 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 import { OrderStatus, OrderType } from '../types';
 import { bigNumberTransformer } from '../transformers/big_number';
 
+interface ContructorOpts {
+    orderHash: string;
+    chainId: number;
+    senderAddress: string;
+    makerAddress: string;
+    takerAddress: string;
+    makerAssetData: string;
+    takerAssetData: string;
+    exchangeAddress: string;
+    feeRecipientAddress: string;
+    expirationTimeSeconds: BigNumber;
+    makerFee: BigNumber;
+    takerFee: BigNumber;
+    makerFeeAssetData: string;
+    takerFeeAssetData: string;
+    makerAssetAmount: BigNumber;
+    takerAssetAmount: BigNumber;
+    salt: BigNumber;
+    signature: string;
+    //remainingFillableTakerAssetAmount: BigNumber;
+    minPrice: BigNumber;
+    maxPrice: BigNumber;
+    orderPrice: BigNumber;
+    oracleAddress: string;
+    baseToken: string;
+    quoteToken: string;
+    orderType: OrderType;
+}
+
 @Entity({ name: 'zero_ex_order' })
 export class ZeroExOrderEntity {
     @PrimaryColumn({ name: 'order_hash', type: 'varchar' })
@@ -86,34 +115,7 @@ export class ZeroExOrderEntity {
     @Column({ name: 'status', type: 'int' })
     public status: OrderStatus;
     constructor(
-        opts: {
-            orderHash: string;
-            chainId: number;
-            senderAddress: string;
-            makerAddress: string;
-            takerAddress: string;
-            makerAssetData: string;
-            takerAssetData: string;
-            exchangeAddress: string;
-            feeRecipientAddress: string;
-            expirationTimeSeconds: BigNumber;
-            makerFee: BigNumber;
-            takerFee: BigNumber;
-            makerFeeAssetData: string;
-            takerFeeAssetData: string;
-            makerAssetAmount: BigNumber;
-            takerAssetAmount: BigNumber;
-            salt: BigNumber;
-            signature: string;
-            //remainingFillableTakerAssetAmount: BigNumber;
-            minPrice: BigNumber;
-            maxPrice: BigNumber;
-            orderPrice: BigNumber;
-            oracleAddress: string;
-            baseToken: string;
-            quoteToken: string;
-            orderType: OrderType;
-        },
+        opts: ContructorOpts = {} as ContructorOpts,
     ) {
         this.orderHash = opts.orderHash;
         this.chainId = opts.chainId;
