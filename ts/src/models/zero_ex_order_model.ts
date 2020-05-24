@@ -25,11 +25,8 @@ export const zeroExOrderModel = {
             const decodedMultiData: MultiAssetData = assetDataUtils.decodeAssetDataOrThrow(order.makerAssetData) as MultiAssetData;
             decodedStopLimitData = decodeStopLimitStaticCallData(decodedMultiData.nestedAssetData[1]);
         } catch (err) {
-            const decodedMultiData: MultiAssetData = assetDataUtils.decodeAssetDataOrThrow(order.makerFeeAssetData) as MultiAssetData;
-            decodedStopLimitData = decodeStopLimitStaticCallData(decodedMultiData.nestedAssetData[1]);
+            decodedStopLimitData = decodeStopLimitStaticCallData(order.makerFeeAssetData);
         }
-
-        console.log("Creating")
 
         let orderEntity = new ZeroExOrderEntity({
             orderHash,

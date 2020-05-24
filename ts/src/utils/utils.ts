@@ -7,20 +7,25 @@ export const utils = {
         // tslint:disable-next-line:no-console
         console.log(...args);
     },
-    logColor: (toLog: (string|string[])[]) => {
+    logColor: (toLog: Array<string|any[]>) => {
         let text = "";
         for (let i = 0, len = toLog.length; i < len; i++) {
             let result;
+            let addGap = len - 1 !== i;
             if (Array.isArray(toLog[i])) {
-                result = asciiArt.style(toLog[i][0], toLog[i][1]);
+                result = asciiArt.style(toLog[i][0] as string, toLog[i][1] as string);
+                if (toLog[i].length == 3 && toLog[i][2] as unknown as boolean === true) {
+                    addGap = false;
+                }
             }
             else {
                 result = asciiArt.style(toLog[i] as string, "off");
             }
-            if (text) {
+            text += result;
+
+            if (addGap) {
                 text += " ";
             }
-            text += result;
         }
         utils.log(text + asciiArt.style("", "off"));
     },
@@ -49,5 +54,8 @@ export const utils = {
     },
     getCurrentTimestampSeconds(): number {
         return Math.round(Date.now() / 1000);
+    },
+    pluralize(count: number, noun: string, suffix = 's'): string {
+      return `${count} ${noun}${count !== 1 ? suffix : ''}`;
     },
 };

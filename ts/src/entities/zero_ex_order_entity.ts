@@ -82,8 +82,8 @@ export class ZeroExOrderEntity {
     @Column({ name: 'signature', type: 'varchar' })
     public signature: string;
 
-    @Column({ name: 'remaining_fillable_taker_asset_amount', type: 'varchar', transformer: bigNumberTransformer })
-    public remainingFillableTakerAssetAmount: BigNumber;
+    //@Column({ name: 'remaining_fillable_taker_asset_amount', type: 'varchar', transformer: bigNumberTransformer })
+    //public remainingFillableTakerAssetAmount: BigNumber;
 
     @Column({ name: 'maker_fee_asset_data', type: 'varchar' })
     public makerFeeAssetData: string;

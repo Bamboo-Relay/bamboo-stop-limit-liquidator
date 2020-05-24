@@ -3,6 +3,7 @@ import fetch from 'node-fetch';
 
 import { Configs, EthGasStationResponse } from '../types';
 import { NetworkService } from './network_service_interface';
+import { utils } from '../utils/utils';
 
 export class GasPriceService implements NetworkService {
     private readonly _configs: Configs;
@@ -42,9 +43,19 @@ export class GasPriceService implements NetworkService {
 
     private async _updateCurrentGasPriceAsync(): Promise<void> {
         try {
-            const response: EthGasStationResponse = await (await fetch(this._configs.GAS_PRICE_SOURCE)).json();
-            this._currentGasPrice = new BigNumber(response.fastest).shiftedBy(8);
-        } catch (err) {}
+            const url = this._configs.GAS_PRICE_SOURCE === "ethgasstation" ? "https://ethgasstation.info/json/ethgasAPI.json" : this._configs.GAS_PRICE_SOURCE;
+            const response: EthGasStationResponse = await (await fetch(url)).json();
+            const newGasPrice = new BigNumber(response.fastest).shiftedBy(8);
+            if (!this._currentGasPrice.eq(newGasPrice)) {
+                this._currentGasPrice = new BigNumber(response.fastest).shiftedBy(8);
+                utils.logColor([
+                    "Gas price is",
+                    [this._currentGasPrice.shiftedBy(-9).toString() + " gwei", "cyan"]
+                ]);
+            }
+        } catch (err) {
+            console.log(err)
+        }
 
         this._scheduleUpdateTimer();
     }

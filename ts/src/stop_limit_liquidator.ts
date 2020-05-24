@@ -8,6 +8,7 @@ import { configs } from './production_configs';
 import { GasPriceService } from './services/gas_price_service';
 import { OraclePriceService } from './services/oracle_price_service';
 import { OrderService } from './services/order_service';
+import { TradeService } from './services/trade_service';
 import { utils } from './utils/utils';
 import { hasDBConnection, initDBConnectionAsync } from './db_connection';
 
@@ -34,8 +35,15 @@ import { hasDBConnection, initDBConnectionAsync } from './db_connection';
     const gasPriceService = new GasPriceService(configs);
     const oraclePriceService = new OraclePriceService(configs);
     const orderService = new OrderService(configs);
+    const tradeService = new TradeService(configs);
     
-    const liquidator = new Liquidator(configs, gasPriceService, oraclePriceService, orderService);
+    const liquidator = new Liquidator(
+        configs, 
+        gasPriceService, 
+        oraclePriceService, 
+        orderService,
+        tradeService
+    );
 
     await liquidator.start();
 })().catch(utils.log);

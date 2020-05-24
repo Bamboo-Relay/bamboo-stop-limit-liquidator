@@ -18,12 +18,6 @@ export function assertConfigsAreValid(configs: Configs): void {
     assertEnvVarType('GAS_PRICE_POLL_RATE_MS', configs.GAS_PRICE_POLL_RATE_MS, EnvVarType.Integer);
     assertEnvVarType('API_POLL_RATE', configs.API_POLL_RATE, EnvVarType.Integer);
     assert.isUri('ETHEREUM_RPC_HTTP_URL', configs.ETHEREUM_RPC_HTTP_URL);
-/*ETHEREUM_RPC_TYPE
-ETHEREUM_RPC_CONNECTION_METHOD
-GAS_PRICE_SOURCE
-
-RESTRICTED_TOKEN_PAIRS
-API_TYPE*/
 }
 
 function assertEnvVarType(name: string, value: any, expectedType: EnvVarType): any {

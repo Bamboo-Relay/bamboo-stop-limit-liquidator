@@ -1,12 +1,11 @@
 import { BigNumber } from '@0x/utils';
 import { SignedOrder } from '@0x/types';
-import { assetDataUtils, ERC20AssetData, orderCalculationUtils, orderHashUtils } from "@0x/order-utils";
+import { assetDataUtils, ERC20AssetData } from "@0x/order-utils";
 
-import { Oracles, Tokens, OrderSummary, OrderType, BambooSignedOrder } from '../types';
+import { Oracles, Tokens, OrderSummary, OrderType, TradeProfitResult, BambooSignedOrder } from '../types';
 import { ZeroExOrderEntity } from '../entities/zero_ex_order_entity';
 import oracles from '../addresses/oracles.json';
 import tokens from '../addresses/tokens.json';
-import { utils } from './utils';
 
 export const orderUtils = {
     isValidOrder: (order: BambooSignedOrder): boolean => {
@@ -35,50 +34,71 @@ export const orderUtils = {
         gasPrice: BigNumber,
         ethFiatPrice: BigNumber,
         tokenFiatPrice: BigNumber,
-        minimumProfitPercentage: BigNumber
+        minimumProfitPercentage: BigNumber,
+        chainId: number,
+        isInverse = false
     ): boolean => {
-        if (orderSummary.minPrice.lt(price) || orderSummary.maxPrice.gt(price)) {
+        const checkPrice = isInverse
+            ? new BigNumber(1).dividedBy(price.shiftedBy(-18)).shiftedBy(18)
+            : price;
+
+        // Need to check against the raw oracle value
+        if (orderSummary.minPrice.gt(checkPrice) || orderSummary.maxPrice.lt(checkPrice)) {
             return false;
         }
 
-        const priceDifference = orderSummary.orderType === OrderType.Buy
-            ? orderSummary.orderPrice.minus(price)
-            : price.minus(orderSummary.orderPrice);
+        const chainTokens = (tokens as Tokens)[chainId.toString()];
 
+        const baseToken = chainTokens.find(el => el.symbol === orderSummary.baseToken);
+        const quoteToken = chainTokens.find(el => el.symbol === orderSummary.quoteToken);
+
+        if (!baseToken || !quoteToken) {
+            return false;
+        }
+
+        const shiftedPrice = price.shiftedBy(-18);
+
+        // We need to fill the taker amount,maker amount minus - taker / divided by price,
         const tradeProfit = orderSummary.orderType === OrderType.Buy
-            ? orderSummary.makerAssetAmount.times(priceDifference)
-            : orderSummary.takerAssetAmount.times(priceDifference);
+            ? orderSummary.makerAssetAmount.minus(orderSummary.takerAssetAmount.times(shiftedPrice))
+            : orderSummary.makerAssetAmount.minus(orderSummary.takerAssetAmount.dividedBy(shiftedPrice));
 
-        const takerAmountProfit = orderSummary.orderType === OrderType.Buy
-            ? tradeProfit.times(orderSummary.makerAssetAmount.dividedBy(orderSummary.takerAssetAmount).integerValue(BigNumber.ROUND_FLOOR))
-            : tradeProfit;
-
-        const takerProfit = takerAmountProfit.minus(orderSummary.takerFee);
+        const takerProfit = tradeProfit.minus(orderSummary.takerFee).shiftedBy(
+            orderSummary.orderType === OrderType.Buy
+                ? -quoteToken.decimals
+                : -baseToken.decimals
+        );
 
         // Decimals
-        const takerFiatProfit = orderSummary.orderType === OrderType.Buy
-            ? takerProfit.dividedBy(tokenFiatPrice)
-            : takerProfit.times(tokenFiatPrice);
+        let takerFiatProfit;
+
+        if (isInverse) {
+            takerFiatProfit = orderSummary.orderType === OrderType.Buy
+                ? takerProfit.dividedBy(ethFiatPrice).times(tokenFiatPrice)
+                : takerProfit.times(ethFiatPrice);
+        }
+        else {
+            takerFiatProfit = orderSummary.orderType === OrderType.Buy
+                ? takerProfit.times(ethFiatPrice)
+                : takerProfit.times(tokenFiatPrice);
+        }
 
         // Asume atomic match, i.e. two ZeroExOrders
         const protocolFeeFiat = new BigNumber(150000).times(gasPrice).times(2).shiftedBy(-18).times(ethFiatPrice);
-
-        // Estimate
-        const gasCostFiat = new BigNumber(300000).times(gasPrice).times(2).shiftedBy(-18).times(ethFiatPrice);
-
+        const gasCostFiat = new BigNumber(360000).times(gasPrice).shiftedBy(-18).times(ethFiatPrice);
         const fiatProfit = takerFiatProfit.minus(protocolFeeFiat).minus(gasCostFiat);
 
         return fiatProfit.gt(0) && fiatProfit.dividedBy(takerFiatProfit).times(100).gte(minimumProfitPercentage);
     },
-    async isTradeProfitable(
+    async calculateTradeProfit(
         stopLimitOrder: SignedOrder,
         matchedOrder: SignedOrder,
-        fillTakerAssetAmount: BigNumber,
         gasPrice: BigNumber,
         ethFiatPrice: BigNumber,
         tokenFiatPrice: BigNumber,
-        minimumProfitPercentage: BigNumber
-        ): Promise<boolean> {
+        minimumProfitPercentage: BigNumber,
+        isInverse = false
+        ): Promise<TradeProfitResult> {
         const chainTokens = (tokens as Tokens)[stopLimitOrder.chainId.toString()];
 
         const tokenA = (assetDataUtils.decodeAssetDataOrThrow(matchedOrder.takerAssetData) as ERC20AssetData).tokenAddress;
@@ -86,48 +106,64 @@ export const orderUtils = {
 
         let baseToken = chainTokens.find(el => el.address === tokenA);
         let quoteToken = chainTokens.find(el => el.address === tokenB);
-        let orderType = OrderType.Sell;
+        let orderType = OrderType.Buy;
 
         if (!baseToken || !quoteToken) {
             baseToken = chainTokens.find(el => el.address === tokenB);
             quoteToken = chainTokens.find(el => el.address === tokenA);
-            orderType = OrderType.Buy;
+            orderType = OrderType.Sell;
+        }
+        
+        if (!baseToken || !quoteToken) {
+            return {
+                isProfitable: false,
+                fiatProfit: new BigNumber(0),
+                assetProfit: new BigNumber(0),
+            };
         }
 
-        const fillMakerAssetAmount = orderCalculationUtils.getMakerFillAmount(
-            matchedOrder,
-            fillTakerAssetAmount
+        let matchedFilledAmount: BigNumber;
+
+        if (stopLimitOrder.takerAssetAmount.gt(matchedOrder.makerAssetAmount)) {
+            matchedFilledAmount = matchedOrder.takerAssetAmount;
+        }
+        else {
+            matchedFilledAmount = matchedOrder.takerAssetAmount.multipliedBy(stopLimitOrder.takerAssetAmount)
+                .plus(matchedOrder.makerAssetAmount.minus(1))
+                .dividedBy(matchedOrder.makerAssetAmount);
+        }
+
+        const tradeProfit = stopLimitOrder.makerAssetAmount.minus(matchedFilledAmount);
+
+        const takerProfit = tradeProfit.minus(stopLimitOrder.takerFee).minus(matchedOrder.takerFee).shiftedBy(
+            orderType === OrderType.Buy
+                ? -quoteToken.decimals
+                : -baseToken.decimals
         );
 
-        let makerAssetFilledAmount: BigNumber;
+        let takerFiatProfit;
 
-        if (stopLimitOrder.takerAssetAmount.gt(fillMakerAssetAmount)) {
-            makerAssetFilledAmount = stopLimitOrder.makerAssetAmount.times(fillMakerAssetAmount).dividedBy(stopLimitOrder.takerAssetAmount).integerValue(BigNumber.ROUND_FLOOR);
-        } else {
-            makerAssetFilledAmount = stopLimitOrder.makerAssetAmount;
+        if (isInverse) {
+            takerFiatProfit = orderType === OrderType.Buy
+                ? takerProfit.dividedBy(ethFiatPrice).times(tokenFiatPrice)
+                : takerProfit.times(ethFiatPrice);
         }
-
-        const profitMakerAsset = makerAssetFilledAmount.minus(fillTakerAssetAmount);
-
-        const profitMakerFiat = orderType === OrderType.Buy
-            ? profitMakerAsset.dividedBy(tokenFiatPrice)
-            : profitMakerAsset.times(tokenFiatPrice);
+        else {
+            takerFiatProfit = orderType === OrderType.Buy
+                ? takerProfit.times(ethFiatPrice)
+                : takerProfit.times(tokenFiatPrice);
+        }
 
         // Asume atomic match, i.e. two ZeroExOrders
         const protocolFeeFiat = new BigNumber(150000).times(gasPrice).times(2).shiftedBy(-18).times(ethFiatPrice);
+        const gasCostFiat = new BigNumber(360000).times(gasPrice).shiftedBy(-18).times(ethFiatPrice);
+        const fiatProfit = takerFiatProfit.minus(protocolFeeFiat).minus(gasCostFiat);
 
-        // Estimate
-        const gasCostFiat = new BigNumber(300000).times(gasPrice).times(2).shiftedBy(-18).times(ethFiatPrice);
-
-        const fiatProfit = profitMakerFiat.minus(protocolFeeFiat).minus(gasCostFiat);
-
-        if (fiatProfit.gt(0) && fiatProfit.dividedBy(profitMakerFiat).times(100).gte(minimumProfitPercentage)) {
-            utils.log("Order " + orderHashUtils.getOrderHash(stopLimitOrder) + " is profitable for " + fiatProfit.toFixed(4));
-
-            return true;
-        }
-
-        return false;
+        return {
+            isProfitable: fiatProfit.gt(0) && fiatProfit.dividedBy(takerFiatProfit).times(100).gte(minimumProfitPercentage),
+            fiatProfit: fiatProfit,
+            assetProfit: takerProfit,
+        };
     },
     deserializeOrder: (signedOrderEntity: ZeroExOrderEntity): SignedOrder => {
         return {
@@ -148,6 +184,27 @@ export const orderUtils = {
             makerFeeAssetData: signedOrderEntity.makerFeeAssetData,
             takerFeeAssetData: signedOrderEntity.takerFeeAssetData,
             chainId: signedOrderEntity.chainId,
+        };
+    },
+    jsonToOrder: (json: any): SignedOrder => {
+        return {
+            signature: json.signature,
+            senderAddress: json.senderAddress,
+            makerAddress: json.makerAddress,
+            takerAddress: json.takerAddress,
+            makerFee: new BigNumber(json.makerFee),
+            takerFee: new BigNumber(json.takerFee),
+            makerAssetAmount: new BigNumber(json.makerAssetAmount),
+            takerAssetAmount: new BigNumber(json.takerAssetAmount),
+            makerAssetData: json.makerAssetData,
+            takerAssetData: json.takerAssetData,
+            salt: new BigNumber(json.salt),
+            exchangeAddress: json.exchangeAddress,
+            feeRecipientAddress: json.feeRecipientAddress,
+            expirationTimeSeconds: new BigNumber(json.expirationTimeSeconds),
+            makerFeeAssetData: json.makerFeeAssetData,
+            takerFeeAssetData: json.takerFeeAssetData,
+            chainId: json.chainId,
         };
     },
 };

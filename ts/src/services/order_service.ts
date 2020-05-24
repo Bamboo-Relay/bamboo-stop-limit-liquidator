@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import { BigNumber, NULL_ADDRESS } from '@0x/utils';
 import WebSocket from 'ws';
 
@@ -12,19 +13,29 @@ import {
     Oracles, 
     OrderType, 
     OrderSummary, 
-    OrderHashOrderSummary, 
+    OrderHashOrderSummary,
+    Token,
+    Tokens,
     TokenPairOrderSummary 
 } from '../types';
 import { NetworkService } from './network_service_interface';
 import { zeroExOrderModel } from '../models/zero_ex_order_model';
 import oracles from '../addresses/oracles.json';
+import tokens from '../addresses/tokens.json';
 import { utils } from '../utils/utils';
 import { orderUtils } from '../utils/order_utils';
 
-export class OrderService implements NetworkService {
+export declare interface OrderService {
+    on(event: 'newOrder', listener: (order: OrderSummary) => void): this;
+    on(event: string, listener: Function): this;
+}
+
+export class OrderService extends EventEmitter implements NetworkService {
     private readonly _configs: Configs;
     private readonly _oracles: Oracle[];
+    private readonly _tokens: Token[];
     private readonly _apiUrl: string;
+    private readonly _wsUrl: string;
     private _ws: WebSocket;
     private _updateTimer?: NodeJS.Timeout;
     private _ordersByPair: TokenPairOrderSummary = {};
@@ -32,29 +43,37 @@ export class OrderService implements NetworkService {
     private _isStarted = false;
     private _isSynced = false;
     private _isWsConnected = false;
+    private _lastSyncCount = 0;
     constructor(configs: Configs) {
+        super();
         this._configs = configs;
         switch (configs.CHAIN_ID) {
             default:
                 this._apiUrl = "https://rest.bamboorelay.com/main/0x/";
+                this._wsUrl = "wss://rest.bamboorelay.com/0x/ws";
             break;
 
             case 3:
                 this._apiUrl = "https://rest.bamboorelay.com/ropsten/0x/";
+                this._wsUrl = "wss://rest.bamboorelay.com/0x/ws";
             break;
 
             case 4:
                 this._apiUrl = "https://rest.bamboorelay.com/rinkeby/0x/";
+                this._wsUrl = "wss://rest.bamboorelay.com/0x/ws";
             break;
 
             case 42:
                 this._apiUrl = "https://rest.bamboorelay.com/kovan/0x/";
+                this._wsUrl = "wss://rest.bamboorelay.com/0x/ws";
             break;
 
             case 1337:
-                this._apiUrl = "https://localhost.bamboorelay.com/";
+                this._apiUrl = "https://localhost.bamboorelay.com/rest/testrpc/0x/";
+                this._wsUrl = "http://localhost:5054/0x/ws";
         }
         this._oracles = (oracles as Oracles)[configs.CHAIN_ID.toString()];
+        this._tokens = (tokens as Tokens)[configs.CHAIN_ID.toString()];
     }
 
     public async start(): Promise<boolean> {
@@ -89,7 +108,7 @@ export class OrderService implements NetworkService {
         const tokenPair = baseToken + "-" + quoteToken;
 
         if (tokenPair in this._ordersByPair) {
-            return this._ordersByPair[tokenPair];
+            return this._ordersByPair[tokenPair].filter(el => el !== null);
         }
 
         return [];
@@ -100,27 +119,31 @@ export class OrderService implements NetworkService {
     }
 
     public async matchProfitableOrders(orders: ZeroExOrderEntity[]): Promise<BambooMatchOrders> {
-        const response: BambooMatchOrdersResponse = await(
-            await fetch(
-                this._apiUrl + "orders/match",
-                {
-                    method: 'post',
-                    body: JSON.stringify(orders),
-                    headers: {'Content-Type': 'application/json'},
+        try {
+            const response: BambooMatchOrdersResponse = await(
+                await fetch(
+                    this._apiUrl + "orders/match",
+                    {
+                        method: 'post',
+                        body: JSON.stringify(orders),
+                        headers: {'Content-Type': 'application/json'},
+                    }
+                )
+            ).json();
+
+            const result: BambooMatchOrders = {};
+
+            Object.keys(response).forEach(orderHash => 
+                result[orderHash] = {
+                    order: orderUtils.jsonToOrder(response[orderHash].order),
+                    fillTakerAssetAmount: new BigNumber(response[orderHash].fillTakerAssetAmount),
                 }
-            )
-        ).json();
+            );
 
-        const result: BambooMatchOrders = {};
-
-        Object.keys(response).forEach(orderHash => 
-            result[orderHash] = {
-                order: response[orderHash].order,
-                fillTakerAssetAmount: new BigNumber(response[orderHash].fillTakerAssetAmount),
-            }
-        );
-
-        return result;
+            return result;
+        } catch (err) {
+            return {};
+        }
     }
 
     private _scheduleUpdateTimer(): void {
@@ -134,16 +157,32 @@ export class OrderService implements NetworkService {
         // Pull from database
         let ordersByPair: TokenPairOrderSummary = {};
         let ordersByHash: OrderHashOrderSummary = {};
+        let cachedOrderCount = 0;
+        let validPairs = 0;
 
         const currentTimestamp = utils.getCurrentTimestampSeconds();
 
         for (let i = 0, len = this._oracles.length; i < len; i++) {
             const oracle = this._oracles[i];
 
+            if (oracle.isFiat) {
+                continue;
+            }
+
+            validPairs++;
+
             const ordersForPair = await zeroExOrderModel.getOrdersForPairAsync(oracle.baseToken, oracle.quoteToken);
 
             if (ordersForPair) {
                 const tokenPair = oracle.baseToken + "-" + oracle.quoteToken;
+                const nicePair = oracle.baseToken + "/" + oracle.quoteToken;
+                const baseToken = this._tokens.find(el => el.symbol === oracle.baseToken);
+                const quoteToken = this._tokens.find(el => el.symbol === oracle.quoteToken);
+
+                if (!baseToken || !quoteToken) {
+                    continue;
+                }
+
                 for (let j = 0, len2 = ordersForPair.length; j < len2; j++) {
                     const order = ordersForPair[j];
 
@@ -173,24 +212,79 @@ export class OrderService implements NetworkService {
 
                     ordersByPair[tokenPair].push(orderSummary);
                     ordersByHash[order.orderHash] = orderSummary;
+                    cachedOrderCount++;
+
+                    let minPrice: BigNumber;
+                    let maxPrice: BigNumber;
+
+                    if (oracle.isInverse) {
+                        minPrice = new BigNumber(1).dividedBy(new BigNumber(
+                            order.minPrice
+                        ).shiftedBy(-18));
+                        maxPrice = new BigNumber(1).dividedBy(new BigNumber(
+                            order.maxPrice
+                        ).shiftedBy(-18));
+                    }
+                    else {
+                        minPrice = new BigNumber(order.minPrice).shiftedBy(-18);
+                        maxPrice = new BigNumber(order.maxPrice).shiftedBy(-18);
+                    }
+
+                    utils.logColor([
+                        "Loaded",
+                        [nicePair, "yellow"],
+                        [order.orderType === OrderType.Buy ? "BUY" : "SELL", order.orderType === OrderType.Buy ? "green" : "red"],
+                        [new BigNumber(
+                            order.orderType === OrderType.Buy
+                                ? order.takerAssetAmount
+                                : order.makerAssetAmount
+                        )
+                        .shiftedBy(-baseToken.decimals).toFixed(6), "cyan", true],
+                        ["@", "yellow", true],
+                        [new BigNumber(order.orderPrice).toFixed(6), "cyan"],
+                        "(Trigger",
+                        [minPrice.toFixed(6), "cyan"],
+                        "-",
+                        [maxPrice.toFixed(6), "cyan", true],
+                        ")"
+                    ]);
                 }
             }
         }
 
         this._ordersByPair = ordersByPair;
         this._ordersByHash = ordersByHash;
+
+        utils.log("Loaded " + utils.pluralize(cachedOrderCount, "cached order") + " for " + utils.pluralize(validPairs, "pair"));
     }
 
     private async _syncOrdersAsync(): Promise<boolean> {
         let ordersByPair: TokenPairOrderSummary = this._ordersByPair;
         let ordersByHash: OrderHashOrderSummary = this._ordersByHash;
         let success = true;
+        let foundOrderCount = 0;
+        let validPairs = 0;
+        let didChange = false;
 
         for (let i = 0, len = this._oracles.length; i < len; i++) {
             const oracle = this._oracles[i];
 
+            if (oracle.isFiat) {
+                continue;
+            }
+
+            validPairs++;
+
             try {
                 const tokenPair = oracle.baseToken + "-" + oracle.quoteToken;
+                const nicePair = oracle.baseToken + "/" + oracle.quoteToken;
+                const baseToken = this._tokens.find(el => el.symbol === oracle.baseToken);
+                const quoteToken = this._tokens.find(el => el.symbol === oracle.quoteToken);
+
+                if (!baseToken || !quoteToken) {
+                    continue;
+                }
+
                 const orderBook: BambooOrderbook = await (
                     await fetch(
                         this._apiUrl + "markets/" + tokenPair + "/stopLimitBook"
@@ -209,7 +303,8 @@ export class OrderService implements NetworkService {
                             ordersByPair[tokenPair] = [];
                         }
 
-                        const exists = ordersByPair[tokenPair].find(el => el.orderHash === order.orderHash);
+                        foundOrderCount++;
+                        const exists = ordersByPair[tokenPair].find(el => el && el.orderHash === order.orderHash);
 
                         if (!exists && orderUtils.isValidOrder(order)) {
                             const orderPrice = new BigNumber(order.price);
@@ -217,7 +312,7 @@ export class OrderService implements NetworkService {
                                 order.signedOrder,
                                 oracle.baseToken,
                                 oracle.quoteToken,
-                                OrderType.Buy,
+                                order.type === BambooOrderType.BID ? OrderType.Buy : OrderType.Sell,
                                 orderPrice
                             );
 
@@ -237,25 +332,67 @@ export class OrderService implements NetworkService {
 
                             ordersByPair[tokenPair].push(orderSummary);
                             ordersByHash[order.orderHash] = orderSummary;
+
+                            let minPrice: BigNumber;
+                            let maxPrice: BigNumber;
+
+                            if (oracle.isInverse) {
+                                minPrice = new BigNumber(1).dividedBy(new BigNumber(
+                                    zeroExOrder.minPrice
+                                ).shiftedBy(-18));
+                                maxPrice = new BigNumber(1).dividedBy(new BigNumber(
+                                    zeroExOrder.maxPrice
+                                ).shiftedBy(-18));
+                            }
+                            else {
+                                minPrice = new BigNumber(zeroExOrder.minPrice).shiftedBy(-18);
+                                maxPrice = new BigNumber(zeroExOrder.maxPrice).shiftedBy(-18);
+                            }
+
+                            utils.logColor([
+                                "Order added for",
+                                [nicePair, "yellow"],
+                                [order.type === BambooOrderType.BID ? "BUY" : "SELL", order.type === BambooOrderType.BID ? "green" : "red"],
+                                [new BigNumber(order.remainingBaseTokenAmount).toFixed(6), "cyan", true],
+                                ["@", "yellow", true],
+                                [new BigNumber(zeroExOrder.orderPrice).toFixed(6), "cyan"],
+                                "(Trigger",
+                                [minPrice.toFixed(6), "cyan"],
+                                "-",
+                                [maxPrice.toFixed(6), "cyan", true],
+                                ")"
+                            ]);
+
+                            didChange = true;
                         }
                     }
                 }
 
-                for (let j = 0, len2 = ordersByPair[tokenPair].length; j < len2; j++) {
-                    const order = ordersByPair[tokenPair][j];
+                if (tokenPair in ordersByPair) {
+                    for (let j = 0, len2 = ordersByPair[tokenPair].length; j < len2; j++) {
+                        const order = ordersByPair[tokenPair][j];
 
-                    if (!(order.orderHash in foundHashes)) {
-                        const zeroExOrder = await zeroExOrderModel.findByOrderHashAsync(order.orderHash);
-                        if (zeroExOrder) {
-                            await zeroExOrderModel.deleteAsync(zeroExOrder);
+                        if (order && !(order.orderHash in foundHashes)) {
+                            const zeroExOrder = await zeroExOrderModel.findByOrderHashAsync(order.orderHash);
+                            if (zeroExOrder) {
+                                await zeroExOrderModel.deleteAsync(zeroExOrder);
+                            }
+                            delete ordersByPair[tokenPair][j];
+                            delete ordersByHash[order.orderHash];
+
+                            didChange = true;
                         }
-                        delete ordersByPair[tokenPair][j];
-                        delete ordersByHash[order.orderHash];
                     }
                 }
             } catch (err) {
                 success = false;
+                utils.log(err)
             }
+        }
+
+        if (this._lastSyncCount !== foundOrderCount || didChange) {
+            this._lastSyncCount = foundOrderCount;
+            utils.log("Synced " + utils.pluralize(foundOrderCount, "order") + " for " + utils.pluralize(validPairs, "pair"));
         }
 
         this._scheduleUpdateTimer();
@@ -264,7 +401,7 @@ export class OrderService implements NetworkService {
 
     private _listenWebSocket(): void {
         let isAlive = true;
-        this._ws = new WebSocket(this._apiUrl + "ws");
+        this._ws = new WebSocket(this._wsUrl);
 
         this._ws.on('pong', () => isAlive = true);
 
@@ -286,9 +423,11 @@ export class OrderService implements NetworkService {
                                 if (zeroExOrder) {
                                     await zeroExOrderModel.deleteAsync(zeroExOrder);
                                 }
-                                const index = this._ordersByPair[tokenPair].findIndex(el => el.orderHash === orderHash);
-                                if (index) {
-                                    delete this._ordersByPair[tokenPair][index];
+                                if (tokenPair in this._ordersByPair) {
+                                    const index = this._ordersByPair[tokenPair].findIndex(el => el && el.orderHash === orderHash);
+                                    if (index) {
+                                        delete this._ordersByPair[tokenPair][index];
+                                    }
                                 }
                                 delete this._ordersByHash[orderHash];
                             }
@@ -306,7 +445,7 @@ export class OrderService implements NetworkService {
                                         order.signedOrder,
                                         oracle.baseToken,
                                         oracle.quoteToken,
-                                        OrderType.Buy,
+                                        order.type === BambooOrderType.BID ? OrderType.Buy : OrderType.Sell,
                                         orderPrice
                                     );
 
@@ -324,8 +463,44 @@ export class OrderService implements NetworkService {
                                         orderType: order.type === BambooOrderType.BID ? OrderType.Buy : OrderType.Sell
                                     }
 
+                                    if (!(tokenPair in this._ordersByPair)) {
+                                        this._ordersByPair[tokenPair] = [];
+                                    }
+
                                     this._ordersByPair[tokenPair].push(orderSummary);
                                     this._ordersByHash[order.orderHash] = orderSummary;
+
+                                    let minPrice: BigNumber;
+                                    let maxPrice: BigNumber;
+
+                                    if (oracle.isInverse) {
+                                        minPrice = new BigNumber(1).dividedBy(new BigNumber(
+                                            zeroExOrder.minPrice
+                                        ).shiftedBy(-18));
+                                        maxPrice = new BigNumber(1).dividedBy(new BigNumber(
+                                            zeroExOrder.maxPrice
+                                        ).shiftedBy(-18));
+                                    }
+                                    else {
+                                        minPrice = new BigNumber(zeroExOrder.minPrice).shiftedBy(-18);
+                                        maxPrice = new BigNumber(zeroExOrder.maxPrice).shiftedBy(-18);
+                                    }
+
+                                    utils.logColor([
+                                        "Order added for",
+                                        [oracle.baseToken + "/" + oracle.quoteToken, "yellow"],
+                                        [order.type === BambooOrderType.BID ? "BUY" : "SELL", order.type === BambooOrderType.BID ? "green" : "red"],
+                                        [new BigNumber(order.remainingBaseTokenAmount).toFixed(6), "cyan", true],
+                                        ["@", "yellow", true],
+                                        [new BigNumber(zeroExOrder.orderPrice).toFixed(6), "cyan"],
+                                        "(Trigger",
+                                        [minPrice.toFixed(6), "cyan"],
+                                        "-",
+                                        [maxPrice.toFixed(6), "cyan", true],
+                                        ")"
+                                    ]);
+
+                                    this.emit("newOrder", orderSummary);
                                 }
                             }
                         break;
@@ -351,6 +526,10 @@ export class OrderService implements NetworkService {
             if (!this._isStarted) {
                 setTimeout(() => this._listenWebSocket(), 5000);
             }
+        });
+
+        this._ws.on("error", (err) => {
+            console.log(err)
         });
 
         const heartBeat = () => {

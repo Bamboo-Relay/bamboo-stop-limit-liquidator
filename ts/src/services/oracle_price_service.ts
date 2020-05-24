@@ -10,6 +10,7 @@ import { NetworkService } from './network_service_interface';
 import oracles from '../addresses/oracles.json';
 import AnswerUpdatedABI from '../abi/AnswerUpdated.json';
 import latestAnswerABI from '../abi/latestAnswer.json';
+import { utils } from '../utils/utils';
 
 const ANSWER_UPDATED_LOG_TOPIC = "0x0559884fd3a460db3073b7fc896cc77986f16e378210ded43186175bf646fc5f";
 
@@ -44,9 +45,9 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
         this._subscription = this._web3.eth.subscribe("logs", {
             address: this._oracles.map(oracle => oracle.address),
             topics: [ ANSWER_UPDATED_LOG_TOPIC ]
-        }, this._log);
+        }, (error: Error, log: Log) => this._log(error, log));
 
-        this._scheduleUpdateTimer();
+        this._updateAllAsync();
 
         return true;
     }
@@ -88,19 +89,15 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
             oracleContract.address = oracle.address;
             try {
                 const price = new BigNumber(await oracleContract.methods.latestAnswer().call());
-
                 if (price.gt(0)) {
-                    const tokenPair = oracle.baseToken + "-" + oracle.quoteToken;
-
-                    if (!(tokenPair in this._lastPrices) || !this._lastPrices[tokenPair].eq(price)) {
-                        this._lastPrices[tokenPair] = price;
-                        this._emitPriceUpdate(oracle, price);
-                    }
+                    this._updatePrice(oracle, price);
                 }
             } catch (err) {
                 console.log(err);
             }
         }
+
+        this._scheduleUpdateTimer();
     }
 
     public getLastPrice(baseToken: string, quoteToken: string): BigNumber | undefined {
@@ -114,8 +111,17 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
     public getTokenFiatPrice(token: string, fiatAsset: string): BigNumber | undefined {
         const isUSD = fiatAsset === "USD";
 
-        if ("WETH-USD" in this._lastPrices) {
-            const wethUSD = this._lastPrices["WETH-USD"].shiftedBy(-8);
+        const wethUSD = (
+            "WETH-USD" in this._lastPrices 
+                ? this._lastPrices["WETH-USD"].shiftedBy(-8)
+                : (
+                    "USD-WETH" in this._lastPrices
+                    ? new BigNumber(1).dividedBy(this._lastPrices["USD-WETH"].shiftedBy(-8))
+                    : new BigNumber(0)
+                )
+        );
+
+        if (wethUSD.gt(0)) {
             let wethFiat!: BigNumber;
 
             if (isUSD) {
@@ -137,7 +143,7 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
             if (token + "-WETH" in this._lastPrices) {
                 const tokenWETH = this._lastPrices[token + "-WETH"].shiftedBy(-18);
 
-                return tokenWETH.dividedBy(wethFiat);
+                return tokenWETH.times(wethFiat);
             }
         }
     }
@@ -147,18 +153,39 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
             return;
         }
 
-        const decodedLog = AbiDecoder.decodeLogs([ log ])[0];
-        const price = new BigNumber(decodedLog[0].value);
-        const oracle = this._oracles.find((value: Oracle): any => {
-            if (value.address === log.address.toLowerCase()) {
-                return oracle;
+        try {
+            const decodedLog = AbiDecoder.decodeLogs([ log ])[0];
+            const price = new BigNumber(decodedLog.events[0].value);
+            const oracle = this._oracles.find((value: Oracle): any => {
+                if (value.address === log.address.toLowerCase()) {
+                    return oracle;
+                }
+            });
+
+            if (oracle) {
+                this._updatePrice(oracle, price);
             }
-        });
+        } catch (err) {
+            console.log(err)
+        }
+    }
 
-        if (oracle) {
-            this._lastPrices[oracle.baseToken + "-" + oracle.quoteToken] = price;
+    private _updatePrice(oracle: Oracle, price: BigNumber): void {
+        const pair = oracle.baseToken + "-" + oracle.quoteToken;
+        const adjustedPrice = oracle.isInverse 
+            ? new BigNumber(1).dividedBy(price.shiftedBy(-(oracle.isFiat ? 8 : 18))).shiftedBy((oracle.isFiat ? 8 : 18))
+            : price;
 
-            this._emitPriceUpdate(oracle, price);
+        if (!(pair in this._lastPrices) || !this._lastPrices[pair].eq(adjustedPrice)) {
+            // Inverse for some pairs WETH/DAI - DAI/WETH
+            this._lastPrices[pair] = adjustedPrice;
+            utils.logColor([
+                "Updated oracle for",
+                [oracle.baseToken + "/" + oracle.quoteToken, "yellow"],
+                "value is",
+                [adjustedPrice.shiftedBy(-(oracle.isFiat ? 8 : 18)).toFixed(8), "cyan"]
+            ]);
+            this._emitPriceUpdate(oracle, adjustedPrice);            
         }
     }
 
