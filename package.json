@@ -72,6 +72,7 @@
     },
     "resolutions": {
         "ganache-core": "^2.9.0-istanbul.0",
-        "**/scrypt": "Arctek/node-scrypt"
+        "**/scrypt": "Arctek/node-scrypt",
+        "@0x/contracts-coordinator": "Bamboo-Relay/0x-coordinator-contracts-bamboo"
     }
 }

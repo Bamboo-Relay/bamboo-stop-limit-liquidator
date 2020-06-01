@@ -386,7 +386,11 @@ export class OrderService extends EventEmitter implements NetworkService {
                 }
             } catch (err) {
                 success = false;
-                utils.log(err)
+
+                // Orderbook likely empty / does not exist
+                if (!('type' in err) || err.type !== "invalid-json") {
+                    utils.log(err);
+                }
             }
         }
 
