@@ -16,6 +16,7 @@ export interface Configs {
     API_POLL_RATE: number;
     MINIMUM_PROFIT_PERCENT: BigNumber;
     PROFIT_ASSET: string;
+    LOG_FILE: string
 }
 
 export enum EthereumRpcType {

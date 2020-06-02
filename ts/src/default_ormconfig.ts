@@ -6,7 +6,7 @@ export const defaultOrmConfig: ConnectionOptions = {
     type: 'sqlite',
     database: 'database.sqlite',
     synchronize: true,
-    logging: true,
+    logging: false,
     entities: [ZeroExOrderEntity],
     cli: {
         entitiesDir: './entities',

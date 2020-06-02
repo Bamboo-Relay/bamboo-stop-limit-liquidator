@@ -16,4 +16,4 @@ COPY . .
 RUN yarn build
 
 EXPOSE 3000
-CMD [ "forever", "ts/lib/src/index.js" ]
+CMD [ "forever", "ts/lib/src/stop_limit_liquidator.js" ]

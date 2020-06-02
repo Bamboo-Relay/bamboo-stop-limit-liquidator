@@ -6,12 +6,12 @@
     "main": "ts/lib/src/index.js",
     "types": "ts/lib/src/index.d.ts",
     "scripts": {
-        "build": "tsc -p ts/tsconfig.json",
+        "build": "tsc -p ts/tsconfig.json && yarn copy-assets",
+        "copy-assets": "cp -r ts/src/images ts/lib/images",
         "watch": "tsc -w -p ts/tsconfig.json",
         "prettier": "prettier --write 'ts/**/*.ts' --config .prettierrc",
-        "start": "node ts/lib/src/liquidator.js",
+        "start": "node -r dotenv/config ts/lib/stop_limit_liquidator.js",
         "lint": "tslint --project ts --format stylish --exclude ts/src/schemas/**/*",
-        "test": "mocha --require source-map-support/register --require make-promises-safe ts/lib/test/**/*_test.js --timeout 10000 --exit",
         "postinstall": "node -e \"try{ fs.unlinkSync(path.resolve(path.dirname(require.resolve('ganache-core')), './typings/index.d.ts')) } catch (err) {}\""
     },
     "devDependencies": {
@@ -59,7 +59,9 @@
         "@types/ascii-art": "^1.4.0",
         "@types/ws": "^7.2.2",
         "abi-decoder": "^2.3.0",
+        "abort-controller": "^3.0.0",
         "ascii-art": "^2.5.0",
+        "express-async-handler": "^1.1.4",
         "jsonschema": "^1.2.4",
         "lodash": "^4.17.11",
         "node-fetch": "^3.0.0-beta.4",

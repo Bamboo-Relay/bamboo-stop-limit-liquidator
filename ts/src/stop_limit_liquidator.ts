@@ -14,6 +14,7 @@ import { hasDBConnection, initDBConnectionAsync } from './db_connection';
 
 (async () => {
     assertConfigsAreValid(configs);
+    utils.logToFile(configs.LOG_FILE);
     if (!hasDBConnection()) {
         await initDBConnectionAsync();
     }

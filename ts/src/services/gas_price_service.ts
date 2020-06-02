@@ -44,7 +44,7 @@ export class GasPriceService implements NetworkService {
     private async _updateCurrentGasPriceAsync(): Promise<void> {
         try {
             const url = this._configs.GAS_PRICE_SOURCE === "ethgasstation" ? "https://ethgasstation.info/json/ethgasAPI.json" : this._configs.GAS_PRICE_SOURCE;
-            const response: EthGasStationResponse = await (await fetch(url)).json();
+            const response: EthGasStationResponse = await (await fetch(url)).json() as EthGasStationResponse;
             const newGasPrice = new BigNumber(response.fastest).shiftedBy(8);
             if (!this._currentGasPrice.eq(newGasPrice)) {
                 this._currentGasPrice = new BigNumber(response.fastest).shiftedBy(8);

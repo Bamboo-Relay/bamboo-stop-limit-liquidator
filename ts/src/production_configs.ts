@@ -42,4 +42,7 @@ export const configs: Configs = {
     MINIMUM_PROFIT_PERCENT: process.env.MINIMUM_PROFIT_PERCENT === undefined ? new BigNumber(1) : new BigNumber(process.env.MINIMUM_PROFIT_PERCENT),
 
     PROFIT_ASSET: process.env.PROFIT_ASSET === undefined ? "USD" : process.env.PROFIT_ASSET,
+
+    LOG_FILE: process.env.LOG_FILE === undefined ? "stop-limit.log" : process.env.LOG_FILE,
+    
 };
