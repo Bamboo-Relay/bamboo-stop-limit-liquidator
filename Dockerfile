@@ -1,4 +1,4 @@
-FROM node:11.1.0
+FROM node:10.19.0
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -16,4 +16,4 @@ COPY . .
 RUN yarn build
 
 EXPOSE 3000
-CMD [ "forever", "ts/lib/src/stop_limit_liquidator.js" ]
+CMD [ "forever", "ts/lib/stop_limit_liquidator.js" ]

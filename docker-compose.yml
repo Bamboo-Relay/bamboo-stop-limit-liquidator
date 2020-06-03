@@ -4,10 +4,10 @@ services:
         build: .
         environment:
             - CHAIN_ID=1
-            - ETHEREUM_RPC_HTTP_URL=""
-            - ETHEREUM_RPC_WS_URL=""
-            - PRIVATE_KEY=""
-            - PROFIT_ASSET="USD"
+            - ETHEREUM_RPC_HTTP_URL=
+            - ETHEREUM_RPC_WS_URL=
+            - PRIVATE_KEY=
+            - PROFIT_ASSET=USD
         # persist the sqlite data to disk so we don't lose it
         # on rebuilds.
         volumes:
