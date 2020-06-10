@@ -7,6 +7,7 @@ import { Configs } from './types';
 enum EnvVarType {
     Port,
     Integer,
+    ProfitAsset
 }
 
 /**
@@ -17,7 +18,8 @@ export function assertConfigsAreValid(configs: Configs): void {
     assertEnvVarType('CHAIN_ID', configs.CHAIN_ID, EnvVarType.Integer);
     assertEnvVarType('GAS_PRICE_POLL_RATE_MS', configs.GAS_PRICE_POLL_RATE_MS, EnvVarType.Integer);
     assertEnvVarType('API_POLL_RATE', configs.API_POLL_RATE, EnvVarType.Integer);
-    assert.isUri('ETHEREUM_RPC_HTTP_URL', configs.ETHEREUM_RPC_HTTP_URL);
+    assertEnvVarType('PROFIT_ASSET', configs.PROFIT_ASSET, EnvVarType.ProfitAsset);
+    assert.isUri('ETHEREUM_RPC_HTTP_URL', configs.ETHEREUM_RPC_HTTP_URL);    
 }
 
 function assertEnvVarType(name: string, value: any, expectedType: EnvVarType): any {
@@ -40,6 +42,19 @@ function assertEnvVarType(name: string, value: any, expectedType: EnvVarType): a
                 returnValue = parseInt(value, 10);
             } catch (err) {
                 throw new Error(`${name} must be a valid integer, found ${value}.`);
+            }
+            return returnValue;
+
+        case EnvVarType.ProfitAsset:
+            if (![
+                'USD',
+                'AUD',
+                'EUR',
+                'CHF',
+                'GBP',
+                'JPY'
+            ].includes(value)) {
+                throw new Error(`${name} must be a valid profit asset, found ${value}.`);
             }
             return returnValue;
 

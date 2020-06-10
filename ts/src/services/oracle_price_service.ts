@@ -47,7 +47,7 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
             topics: [ ANSWER_UPDATED_LOG_TOPIC ]
         }, (error: Error, log: Log) => this._log(error, log));
 
-        this._updateAllAsync();
+        await this._updateAllAsync();
 
         return true;
     }
@@ -91,6 +91,14 @@ export class OraclePriceService extends EventEmitter implements NetworkService {
                 const price = new BigNumber(await oracleContract.methods.latestAnswer().call());
                 if (price.gt(0)) {
                     this._updatePrice(oracle, price);
+                }
+                else {
+                    utils.logColor([
+                        "Oracle for",
+                        [oracle.baseToken + "/" + oracle.quoteToken, "yellow"],
+                        "value is returning a",
+                        ["zero value", "red"]
+                    ]);
                 }
             } catch (err) {
                 console.log(err);

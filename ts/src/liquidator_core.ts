@@ -6,7 +6,7 @@ import { GasPriceService } from './services/gas_price_service';
 import { OraclePriceService } from './services/oracle_price_service';
 import { OrderService } from './services/order_service';
 import { TradeService } from './services/trade_service';
-import { Configs, OrderSummary, TradeProfitResult } from './types';
+import { Configs, OrderSummary, TradeProfitResult, OrderType } from './types';
 import { orderUtils } from './utils/order_utils';
 import { utils } from './utils/utils';
 import { orderHashUtils } from '@0x/order-utils';
@@ -27,7 +27,9 @@ export class Liquidator implements NetworkService {
     private readonly _orderService: OrderService;
     private readonly _tradeService: TradeService;
     private _isStarted: boolean = false;
+    private _isTriggered: boolean = false;
     private _pendingLiquidations: Liquidations = {};
+    private _unprofitableOrders: { [orderHash: string]: boolean } = {};
     constructor(
         configs: Configs,
         gasPriceService: GasPriceService,
@@ -50,6 +52,15 @@ export class Liquidator implements NetworkService {
             (order: OrderSummary) => 
                 this._newOrder(order)
         );
+        this._orderService.on(
+            "connected",
+            (isConnected: boolean) => {
+                if (isConnected && this._isStarted && !this._isTriggered) {
+                    this._isTriggered = true;
+                    this._oraclePriceService.triggerAll();
+                }
+            }
+        );
         this._tradeService.on(
             "transactionComplete",
             (transactionHash: string, status: boolean) => 
@@ -71,7 +82,9 @@ export class Liquidator implements NetworkService {
         this._isStarted = true;
 
         // Has to be post service startup
-        await this._oraclePriceService.triggerAll();
+        if (!this._isTriggered) {
+            await this._oraclePriceService.triggerAll();
+        }
         
         return true;
     }
@@ -84,6 +97,7 @@ export class Liquidator implements NetworkService {
         ]);
 
         this._isStarted = false;
+        this._isTriggered = false;
 
         return true;
     }
@@ -100,7 +114,7 @@ export class Liquidator implements NetworkService {
         const ethFiatPrice = this._oraclePriceService.getTokenFiatPrice("WETH", this._configs.PROFIT_ASSET);
         if (!tokenFiatPrice || !ethFiatPrice) {
             return;
-        }
+        }        
         const gasPrice = this._gasPriceService.getCurrentGasPrice();
         const ordersAvailable = this._orderService.getOrders(baseToken, quoteToken);
         const profitableOrders = await this._findProfitableOrders(
@@ -199,6 +213,12 @@ export class Liquidator implements NetworkService {
             const profitableOrder = orders[i];
             const orderHash = orderHashUtils.getOrderHash(profitableOrder);
             if (!(orderHash in matchedOrders)) {
+                utils.logColor([
+                    "An order for",
+                    [profitableOrder.baseToken + "/" + profitableOrder.quoteToken, "yellow"],
+                    [profitableOrder.orderType === OrderType.Buy ? "BUY" : "SELL", profitableOrder.orderType === OrderType.Buy ? "green" : "red"],
+                    "is in liquidation range but could not be matched to another order by the REST API"
+                ]);
                 continue;
             }
             const matchedOrder = matchedOrders[orderHash];
@@ -220,6 +240,15 @@ export class Liquidator implements NetworkService {
                     profitableOrder,
                     matchedOrder.order,
                     tradeProfit,
+                ]);
+            }
+            else {
+                utils.logColor([
+                    "An order for",
+                    [profitableOrder.baseToken + "/" + profitableOrder.quoteToken, "yellow"],
+                    [profitableOrder.orderType === OrderType.Buy ? "BUY" : "SELL", profitableOrder.orderType === OrderType.Buy ? "green" : "red"],
+                    "is in liquidation range but would produce a loss of",
+                    [tradeProfit.fiatProfit.toFixed(6) + " " + this._configs.PROFIT_ASSET, "red"]
                 ]);
             }
         }
@@ -264,7 +293,7 @@ export class Liquidator implements NetworkService {
 
         for (let i = 0, len = potentialOrders.length; i < len; i++) {
             const order = potentialOrders[i];
-            if (orderUtils.isOrderProfitable(
+            const orderProfitable = orderUtils.isOrderProfitable(
                 order,
                 tokenPrice,
                 gasPrice,
@@ -273,11 +302,23 @@ export class Liquidator implements NetworkService {
                 this._configs.MINIMUM_PROFIT_PERCENT,
                 this._configs.CHAIN_ID,
                 order.baseToken === "WETH"
-            )) {
+            );
+            if (orderProfitable.isProfitable) {
                 const zeroExOrder = await this._orderService.getZeroExOrder(order);
                 if (zeroExOrder) {
                     profitableOrders.push(zeroExOrder);
                 }
+            }
+            else if (!(order.orderHash in this._unprofitableOrders)) {
+                this._unprofitableOrders[order.orderHash] = true;
+
+                utils.logColor([
+                    "An order for",
+                    [order.baseToken + "/" + order.quoteToken, "yellow"],
+                    [order.orderType === OrderType.Buy ? "BUY" : "SELL", order.orderType === OrderType.Buy ? "green" : "red"],
+                    "is in liquidation range but would produce a loss of",
+                    [orderProfitable.fiatProfit.toFixed(6) + " " + this._configs.PROFIT_ASSET, "red"]
+                ]);
             }
         }
         return profitableOrders;

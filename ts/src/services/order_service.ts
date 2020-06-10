@@ -27,6 +27,7 @@ import { orderUtils } from '../utils/order_utils';
 
 export declare interface OrderService {
     on(event: 'newOrder', listener: (order: OrderSummary) => void): this;
+    on(event: 'connected', listener: (isConnected: boolean) => void): this;
     on(event: string, listener: Function): this;
 }
 
@@ -385,7 +386,7 @@ export class OrderService extends EventEmitter implements NetworkService {
                     }
                 }
             } catch (err) {
-                success = false;
+                success = success || false;
 
                 // Orderbook likely empty / does not exist
                 if (!('type' in err) || err.type !== "invalid-json") {
@@ -406,6 +407,42 @@ export class OrderService extends EventEmitter implements NetworkService {
     private _listenWebSocket(): void {
         let isAlive = true;
         this._ws = new WebSocket(this._wsUrl);
+
+        this._ws.on("open", () => {
+            this._ws.send(JSON.stringify({
+                type: "SUBSCRIBE", 
+                topic: "BOOK",
+                market: "ALL",
+                requestId: "bamboo-liquidator-" + Math.floor(new Date().getTime()),
+                chainId: this._configs.CHAIN_ID
+            }));
+            this._isWsConnected = true;
+            this.emit("connected", true);
+        });
+
+        this._ws.on("close", () => {
+            this._isWsConnected = false;
+            this.emit("connected", false);
+            // Reconnect
+            if (!this._isStarted) {
+                setTimeout(() => this._listenWebSocket(), 5000);
+            }
+        });
+
+        this._ws.on("error", (err) => {
+            console.log(err)
+        });
+
+        const heartBeat = () => {
+            if (!isAlive) {
+                this._ws.close();
+            }
+            else {
+                isAlive = false;
+                this._ws.ping();
+                setTimeout(() => heartBeat, 30000);
+            }
+        };
 
         this._ws.on('pong', () => isAlive = true);
 
@@ -512,40 +549,6 @@ export class OrderService extends EventEmitter implements NetworkService {
                 }
             }
         });
-
-        this._ws.on("open", () => {
-            this._ws.send(JSON.stringify({
-                type: "SUBSCRIBE", 
-                topic: "BOOK",
-                market: "ALL",
-                requestId: "bamboo-liquidator-" + Math.floor(new Date().getTime()),
-                chainId: this._configs.CHAIN_ID
-            }));
-            this._isWsConnected = true;
-        });
-
-        this._ws.on("close", () => {
-            this._isWsConnected = false;
-            // Reconnect
-            if (!this._isStarted) {
-                setTimeout(() => this._listenWebSocket(), 5000);
-            }
-        });
-
-        this._ws.on("error", (err) => {
-            console.log(err)
-        });
-
-        const heartBeat = () => {
-            if (!isAlive) {
-                this._ws.close();
-            }
-            else {
-                isAlive = false;
-                this._ws.ping();
-                setTimeout(() => heartBeat, 30000);
-            }
-        };
 
         setTimeout(() => heartBeat, 30000);
     }

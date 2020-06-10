@@ -2,7 +2,7 @@
     "1": [
         {
             "name": "ETH/USD",
-            "address": "0x79febf6b9f76853edbcbc913e6aae8232cfb9de9",
+            "address": "0xf79d6afbb6da890132f9d7c355e3015f15f3406f",
             "baseToken": "WETH",
             "quoteToken": "USD",
             "isFiat": true,
@@ -107,10 +107,10 @@
         {
             "name": "USDC/ETH",
             "address": "0xde54467873c3bcaa76421061036053e371721708",
-            "baseToken": "USDC",
-            "quoteToken": "WETH",
+            "baseToken": "WETH",
+            "quoteToken": "USDC",
             "isFiat": false,
-            "isInverse": false
+            "isInverse": true
         },
         {
             "name": "REP/ETH",
@@ -139,18 +139,18 @@
         {
             "name": "TUSD/ETH",
             "address": "0x73ead35fd6a572ef763b13be65a9db96f7643577",
-            "baseToken": "TUSD",
-            "quoteToken": "WETH",
+            "baseToken": "WETH",
+            "quoteToken": "TUSD",
             "isFiat": false,
-            "isInverse": false
+            "isInverse": true
         },
         {
             "name": "USDT/ETH",
             "address": "0xa874fe207df445ff19e7482c746c4d3fd0cb9ace",
-            "baseToken": "USDT",
-            "quoteToken": "WETH",
+            "baseToken": "WETH",
+            "quoteToken": "USDT",
             "isFiat": false,
-            "isInverse": false
+            "isInverse": true
         },
         {
             "name": "SUSD/ETH",

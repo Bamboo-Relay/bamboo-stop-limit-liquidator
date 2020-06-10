@@ -150,6 +150,9 @@ export class TradeService extends EventEmitter implements NetworkService {
 
         for (let i = 0; i < count; i++) {
             const transactionHash = this._pendingTransactions[i];
+            if (!transactionHash) {
+                continue;
+            }
             let isDone = false;
 
             try {
@@ -167,14 +170,15 @@ export class TradeService extends EventEmitter implements NetworkService {
 
             if (!isDone) {
                 pendingTransactions.push(transactionHash);
+            }
+            else {
                 done++;
             }
-            count++;
         }
 
         this._pendingTransactions = pendingTransactions;
 
-        if (count !== done) {
+        if (count !== done && pendingTransactions.length) {
             this._transactionPollTask = setTimeout(() => this._checkPendingTransactions(), 10000);
         }
     }
