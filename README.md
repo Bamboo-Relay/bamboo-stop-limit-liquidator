@@ -74,7 +74,7 @@ To get a local development version of `bamboo-stop-limit-liquidator` running:
 ## Commands
 
 -   `yarn build` - Build the code
--   `yarn start` - Starts the relayer
+-   `yarn start` - Starts the liquidator
 
 ## Legal Disclaimer
 
