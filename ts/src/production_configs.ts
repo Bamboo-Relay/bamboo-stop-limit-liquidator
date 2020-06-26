@@ -44,5 +44,6 @@ export const configs: Configs = {
     PROFIT_ASSET: process.env.PROFIT_ASSET === undefined ? "USD" : process.env.PROFIT_ASSET,
 
     LOG_FILE: process.env.LOG_FILE === undefined ? "stop-limit.log" : process.env.LOG_FILE,
-    
+
+    ETHGASSTATION_API_KEY: process.env.ETHGASSTATION_API_KEY || "",    
 };

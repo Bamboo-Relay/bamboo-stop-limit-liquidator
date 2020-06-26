@@ -7,7 +7,8 @@ import { Configs } from './types';
 enum EnvVarType {
     Port,
     Integer,
-    ProfitAsset
+    ProfitAsset,
+    EthGasStationApiKey
 }
 
 /**
@@ -19,6 +20,7 @@ export function assertConfigsAreValid(configs: Configs): void {
     assertEnvVarType('GAS_PRICE_POLL_RATE_MS', configs.GAS_PRICE_POLL_RATE_MS, EnvVarType.Integer);
     assertEnvVarType('API_POLL_RATE', configs.API_POLL_RATE, EnvVarType.Integer);
     assertEnvVarType('PROFIT_ASSET', configs.PROFIT_ASSET, EnvVarType.ProfitAsset);
+    assertEnvVarType('ETHGASSTATION_API_KEY', configs.ETHGASSTATION_API_KEY, EnvVarType.EthGasStationApiKey);
     assert.isUri('ETHEREUM_RPC_HTTP_URL', configs.ETHEREUM_RPC_HTTP_URL);    
 }
 
@@ -42,6 +44,12 @@ function assertEnvVarType(name: string, value: any, expectedType: EnvVarType): a
                 returnValue = parseInt(value, 10);
             } catch (err) {
                 throw new Error(`${name} must be a valid integer, found ${value}.`);
+            }
+            return returnValue;
+
+        case EnvVarType.EthGasStationApiKey:
+            if (!value || value.length < 60) {
+                throw new Error(`${name} must be a valid EthGasStation API key, found ${value}.`);
             }
             return returnValue;
 

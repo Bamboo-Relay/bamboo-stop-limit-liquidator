@@ -8,6 +8,7 @@ services:
             - ETHEREUM_RPC_WS_URL=
             - PRIVATE_KEY=
             - PROFIT_ASSET=USD
+            - ETHGASSTATION_API_KEY=
         # persist the sqlite data to disk so we don't lose it
         # on rebuilds.
         volumes:

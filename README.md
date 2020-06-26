@@ -41,6 +41,7 @@ To get a local development version of `bamboo-stop-limit-liquidator` running:
 | `PRIVATE_KEY`                          | Required. No default                                            | Private key corresponding to the Ethereum address you would like to use for liquidations. This should NOT be 0x prefixed. Keep this value safe. |
 | `PROFIT_ASSET`                         | Required. No default                                            | The profit asset that liquidations should be calculated against, valid values are: `USD`, `AUD`, `EUR`, `CHF`, `GBP`, `JPY`.                                                                                                     |
 | `LOG_FILE`                             | Optional. Default to `stop-limit.log`                           | File to log the liquidator console output to.                                                                                                      |
+| `ETHGASSTATION_API_KEY`                | Required.                                                       | API key for EthGasStation.                                                                                                      |
 
 3. Make sure you have [Yarn](https://yarnpkg.com/en/) installed.
 
